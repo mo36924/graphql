@@ -3,7 +3,7 @@ import { defineConfig } from "rollup";
 import dts from "rollup-plugin-dts";
 
 const input = Object.fromEntries(
-  ["buildASTSchema", "config", "index", "json", "schema"].map((name) => [name, `src/${name}.ts`]),
+  ["buildASTSchema", "config", "index", "json", "schema"].map((name) => [name, `./src/${name}.ts`]),
 );
 
 const ts = typescript();
@@ -17,9 +17,19 @@ export default defineConfig([
       entryFileNames: "[name].mjs",
       chunkFileNames: "[name]-[hash].mjs",
       generatedCode: "es2015",
+      hoistTransitiveImports: false,
     },
-    external: /^[@\w]/,
-    plugins: [ts],
+    plugins: [
+      ts,
+      {
+        name: "resolve",
+        resolveId(source) {
+          if (/^[@\w]/.test(source)) {
+            return { id: `${source}${source.startsWith("graphql/") ? ".mjs" : ""}`, external: true };
+          }
+        },
+      },
+    ],
   },
   {
     input,
@@ -29,6 +39,7 @@ export default defineConfig([
       entryFileNames: "[name].cjs",
       chunkFileNames: "[name]-[hash].cjs",
       generatedCode: "es2015",
+      hoistTransitiveImports: false,
       format: "commonjs",
       exports: "auto",
     },

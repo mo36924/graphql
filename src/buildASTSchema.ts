@@ -1,5 +1,14 @@
-import { BuildSchemaOptions, DocumentNode, buildASTSchema as _buildASTSchema } from "graphql";
-import { GraphQLError, GraphQLScalarTypeConfig, Kind, ObjectValueNode, ValueNode, print } from "graphql";
+import {
+  BuildSchemaOptions,
+  DocumentNode,
+  GraphQLError,
+  GraphQLScalarTypeConfig,
+  Kind,
+  ObjectValueNode,
+  ValueNode,
+  buildASTSchema as _buildASTSchema,
+  print,
+} from "graphql";
 import { inspect } from "graphql/jsutils/inspect";
 
 const uuidRegExp =
