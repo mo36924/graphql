@@ -9,6 +9,7 @@ import {
   FieldDefinitionNode,
   GraphQLInputField,
   GraphQLSchema,
+  NoUndefinedVariablesRule,
   ObjectTypeDefinitionNode,
   buildASTSchema as _buildASTSchema,
   getNamedType,
@@ -18,6 +19,7 @@ import {
   isNonNullType,
   parse,
   print,
+  specifiedRules,
   stripIgnoredCharacters,
 } from "graphql";
 import { getArgumentValues } from "graphql/execution/values";
@@ -26,9 +28,7 @@ import prettier from "prettier";
 import buildASTSchema from "./buildASTSchema";
 
 const primaryKeyTypeName = "UUID";
-
 const baseScalarTypeNames = ["ID", "Int", "Float", "String", "Boolean"] as const;
-
 const customScalarTypeNames = ["Date", "UUID", "JSON"] as const;
 const schemaTypeNames = ["Query", "Mutation", "Subscription"];
 const baseFieldNames = ["id", "version", "createdAt", "updatedAt"];
@@ -1232,3 +1232,40 @@ export const generate = () => {
     }
   }
 };
+
+export const validationRules = specifiedRules.filter((rule) => rule !== NoUndefinedVariablesRule);
+
+export const isGraphQLTag = (
+  tag: string,
+): tag is "gql" | "query" | "useQuery" | "mutation" | "useMutation" | "subscription" | "useSubscription" => {
+  switch (tag) {
+    case "gql":
+    case "query":
+    case "useQuery":
+    case "mutation":
+    case "useMutation":
+    case "subscription":
+    case "useSubscription":
+      return true;
+    default:
+      return false;
+  }
+};
+
+export const getGraphQLOperation = (tag: string) => {
+  switch (tag) {
+    case "query":
+    case "useQuery":
+      return "query";
+    case "mutation":
+    case "useMutation":
+      return "mutation";
+    case "subscription":
+    case "useSubscription":
+      return "subscription";
+    default:
+      return "";
+  }
+};
+
+export * from "graphql";

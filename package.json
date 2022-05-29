@@ -1,6 +1,6 @@
 {
   "name": "@mo36924/graphql",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "",
   "keywords": [],
   "homepage": "https://github.com/mo36924/graphql#readme",
@@ -79,6 +79,7 @@
     "cosmiconfig": "^7.0.1",
     "diff": "^5.1.0",
     "graphql": "^16.5.0",
+    "graphql-language-service": "^5.0.4",
     "pluralize": "^8.0.0",
     "prettier": "^2.6.2"
   },
