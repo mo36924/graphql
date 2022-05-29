@@ -1255,7 +1255,7 @@ const generate = () => {
   if (model !== fixedModel) {
     throw new Error(
       `Invalid graphql model: ${modelPath}\n\n${diffChars(model, fixedModel)
-        .map(({ added, removed, value }) => (added ? colors.green(value) : removed ? colors.red(value) : value))
+        .map(({ added, removed, value }) => (added ? colors.bgGreen(value) : removed ? colors.bgRed(value) : value))
         .join("")}`,
     );
   }
