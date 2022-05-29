@@ -23,9 +23,17 @@ export default defineConfig([
       ts,
       {
         name: "resolve",
-        resolveId(source) {
-          if (/^[@\w]/.test(source)) {
-            return { id: `${source}${source.startsWith("graphql/") ? ".mjs" : ""}`, external: true };
+        resolveId(id) {
+          if (id === "graphql") {
+            return { id: "graphql/index.mjs", external: true };
+          }
+
+          if (id.startsWith("graphql/")) {
+            return { id: `${id}.mjs`, external: true };
+          }
+
+          if (/^[@\w]/.test(id)) {
+            return { id, external: true };
           }
         },
       },

@@ -8,7 +8,7 @@ const model = /* GraphQL */ `
 `;
 
 test("buildModel", () => {
-  const { graphql } = buildModel(model);
+  const { graphql, declaration } = buildModel(model);
 
   expect(graphql).toMatchInlineSnapshot(`
     "scalar Date
@@ -183,6 +183,118 @@ test("buildModel", () => {
     enum Order {
       asc
       desc
+    }
+    "
+  `);
+
+  expect(declaration).toMatchInlineSnapshot(`
+    "export {};
+    declare global {
+      namespace GraphQL {
+        type Date = globalThis.Date;
+        type UUID = string;
+        type JSON = any;
+        type Int = number;
+        type String = string;
+        type ID = string;
+        type Float = number;
+        type Boolean = boolean;
+        type Order = \\"asc\\" | \\"desc\\";
+        type CreateData = { user?: CreateDataUser | null; users?: CreateDataUser[] | null };
+        type UpdateData = { user?: UpdateDataUser | null; users?: UpdateDataUser[] | null };
+        type DeleteData = { user?: DeleteDataUser | null; users?: DeleteDataUser[] | null };
+        type CreateDataUser = { name: string };
+        type UpdateDataUser = { id: string; version: string; name?: string | null };
+        type DeleteDataUser = { id: string; version: string };
+        type WhereUser = {
+          id?: WhereUUID | null;
+          version?: WhereUUID | null;
+          createdAt?: WhereDate | null;
+          updatedAt?: WhereDate | null;
+          name?: WhereString | null;
+          and?: WhereUser | null;
+          or?: WhereUser | null;
+          not?: WhereUser | null;
+        };
+        type WhereID = {
+          eq?: string | null;
+          ne?: string | null;
+          gt?: string | null;
+          lt?: string | null;
+          ge?: string | null;
+          le?: string | null;
+          in?: string[] | null;
+          like?: string | null;
+        };
+        type WhereInt = {
+          eq?: number | null;
+          ne?: number | null;
+          gt?: number | null;
+          lt?: number | null;
+          ge?: number | null;
+          le?: number | null;
+          in?: number[] | null;
+          like?: string | null;
+        };
+        type WhereFloat = {
+          eq?: number | null;
+          ne?: number | null;
+          gt?: number | null;
+          lt?: number | null;
+          ge?: number | null;
+          le?: number | null;
+          in?: number[] | null;
+          like?: string | null;
+        };
+        type WhereString = {
+          eq?: string | null;
+          ne?: string | null;
+          gt?: string | null;
+          lt?: string | null;
+          ge?: string | null;
+          le?: string | null;
+          in?: string[] | null;
+          like?: string | null;
+        };
+        type WhereBoolean = { eq?: boolean | null; ne?: boolean | null };
+        type WhereDate = {
+          eq?: Date | null;
+          ne?: Date | null;
+          gt?: Date | null;
+          lt?: Date | null;
+          ge?: Date | null;
+          le?: Date | null;
+          in?: Date[] | null;
+          like?: string | null;
+        };
+        type WhereUUID = {
+          eq?: string | null;
+          ne?: string | null;
+          gt?: string | null;
+          lt?: string | null;
+          ge?: string | null;
+          le?: string | null;
+          in?: string[] | null;
+          like?: string | null;
+        };
+        type WhereJSON = {
+          eq?: any | null;
+          ne?: any | null;
+          gt?: any | null;
+          lt?: any | null;
+          ge?: any | null;
+          le?: any | null;
+          in?: any[] | null;
+          like?: string | null;
+        };
+        type OrderUser = {
+          id?: Order | null;
+          version?: Order | null;
+          createdAt?: Order | null;
+          updatedAt?: Order | null;
+          name?: Order | null;
+        };
+      }
     }
     "
   `);

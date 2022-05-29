@@ -1,7 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
-import chalk from "chalk";
 import { camelCase, pascalCase } from "change-case";
 import { cosmiconfigSync } from "cosmiconfig";
 import { diffChars } from "diff";
@@ -14,15 +13,18 @@ import {
   buildASTSchema as _buildASTSchema,
   getNamedType,
   getNullableType,
+  isEnumType,
   isInputObjectType,
   isListType,
   isNonNullType,
+  isScalarType,
   parse,
   print,
   specifiedRules,
   stripIgnoredCharacters,
 } from "graphql";
 import { getArgumentValues } from "graphql/execution/values";
+import colors from "picocolors";
 import pluralize from "pluralize";
 import prettier from "prettier";
 import buildASTSchema from "./buildASTSchema";
@@ -34,7 +36,10 @@ const schemaTypeNames = ["Query", "Mutation", "Subscription"];
 const baseFieldNames = ["id", "version", "createdAt", "updatedAt"];
 const comparisonOperators = ["eq", "ne", "gt", "lt", "ge", "le", "in", "like"];
 const logicalOperators = ["not", "and", "or"];
+const graphqlTags = ["gql", "query", "useQuery", "mutation", "useMutation", "subscription", "useSubscription"] as const;
 type ScalarTypeName = typeof scalarTypeNames[number];
+type GraphQLTag = typeof graphqlTags[number];
+type GraphQLTagOperation = "" | "query" | "mutation" | "subscription";
 
 const typescriptTypes: { [type in ScalarTypeName]: string } = {
   ID: "string",
@@ -56,6 +61,16 @@ const postgresTypes: { [type in ScalarTypeName]: string } = {
   Date: "timestamp(3)",
   UUID: "uuid",
   JSON: "jsonb",
+};
+
+const graphqlTagOperations: { [tag in GraphQLTag]: GraphQLTagOperation } = {
+  gql: "",
+  query: "query",
+  useQuery: "query",
+  mutation: "mutation",
+  useMutation: "mutation",
+  subscription: "subscription",
+  useSubscription: "subscription",
 };
 
 const customScalars = /* GraphQL */ `
@@ -114,15 +129,14 @@ type Field = {
 const scalarTypeNames = [...baseScalarTypeNames, ...customScalarTypeNames];
 const reservedTypeNames = [...schemaTypeNames, ...scalarTypeNames];
 const reservedFieldNames = [...baseFieldNames, ...logicalOperators];
-
 const isCustomScalarTypeName = (type: string) => customScalarTypeNames.includes(type as any);
-
 const isScalarTypeName = (name: string) => scalarTypeNames.includes(name as any);
-
 const isSchemaTypeName = (name: string) => schemaTypeNames.includes(name);
 const isReservedTypeName = (name: string) => reservedTypeNames.includes(name);
 const isReservedFieldName = (name: string) => reservedFieldNames.includes(name);
 const isBaseFieldName = (type: string) => baseFieldNames.includes(type);
+const isGraphQLTag = (tag: string): tag is GraphQLTag => graphqlTags.includes(tag as any);
+const validationRules = specifiedRules.filter((rule) => rule !== NoUndefinedVariablesRule);
 
 const getTypescriptType = (type: string): string =>
   typescriptTypes.hasOwnProperty(type) ? typescriptTypes[type as ScalarTypeName] : type;
@@ -134,6 +148,8 @@ const getPostgresTypes = (type: string) => {
 
   throw new Error("Invalid type.");
 };
+
+const getGraphQLTagOperation = (tag: GraphQLTag) => graphqlTagOperations[tag];
 
 const getTypeName = (name: string) => {
   name = pascalCase(pluralize.singular(name));
@@ -973,24 +989,42 @@ const buildDeclaration = (schema: GraphQLSchema) => {
   };
 
   const types = schema.getTypeMap();
-  let declaration = `export{};declare global { namespace GraphQL {`;
+  let scalars = ``;
+  let enums = ``;
+  let inputs = ``;
 
   for (const type of Object.values(types)) {
     const name = type.name;
 
-    if (isInputObjectType(type)) {
-      declaration += `type ${name} = {`;
+    if (name[0] === "_") {
+      continue;
+    }
 
-      for (const field of Object.values(type.getFields())) {
-        declaration += getFieldType(field);
+    if (isScalarType(type)) {
+      let type = getTypescriptType(name);
+
+      if (type === "Date") {
+        type = "globalThis.Date";
       }
 
-      declaration += "};";
+      scalars += `type ${name} = ${type};`;
+    } else if (isEnumType(type)) {
+      enums += `type ${name} = ${type
+        .getValues()
+        .map(({ value }) => `"${value}"`)
+        .join("|")};`;
+    } else if (isInputObjectType(type)) {
+      inputs += `type ${name} = {`;
+
+      for (const field of Object.values(type.getFields())) {
+        inputs += getFieldType(field);
+      }
+
+      inputs += "};";
     }
   }
 
-  declaration += "}}";
-  return format(declaration, ".d.ts");
+  return format(`export{};declare global { namespace GraphQL {${scalars + enums + inputs}} }`, ".d.ts");
 };
 
 const buildTestData = (types: Types, baseRecordCount = 3) => {
@@ -1156,7 +1190,7 @@ const buildPostgersTestData = (data: ReturnType<typeof buildTestData>) => {
   return sql;
 };
 
-export const buildModel = (model: string) => {
+const buildModel = (model: string) => {
   const fixedModel = fixModel(model);
   const graphql = buildModelGraphQL(fixedModel);
   const document = parse(graphql);
@@ -1181,7 +1215,7 @@ export const buildModel = (model: string) => {
   };
 };
 
-export const loadConfig = () => {
+const loadConfig = () => {
   const _dirname = dirname(fileURLToPath(import.meta.url));
   const result = cosmiconfigSync("graphql").search(_dirname);
 
@@ -1211,9 +1245,9 @@ export const loadConfig = () => {
   };
 };
 
-export const getSchema = () => buildModel(readFileSync(loadConfig().model, "utf-8")).schema;
+const getSchema = () => buildModel(readFileSync(loadConfig().model, "utf-8")).schema;
 
-export const generate = () => {
+const generate = () => {
   const { model: modelPath, ...config } = loadConfig();
   const model = readFileSync(modelPath, "utf-8");
   const { fixedModel, ...result } = buildModel(model);
@@ -1221,7 +1255,7 @@ export const generate = () => {
   if (model !== fixedModel) {
     throw new Error(
       `Invalid graphql model: ${modelPath}\n\n${diffChars(model, fixedModel)
-        .map(({ added, removed, value }) => (added ? chalk.green(value) : removed ? chalk.red(value) : value))
+        .map(({ added, removed, value }) => (added ? colors.green(value) : removed ? colors.red(value) : value))
         .join("")}`,
     );
   }
@@ -1233,39 +1267,15 @@ export const generate = () => {
   }
 };
 
-export const validationRules = specifiedRules.filter((rule) => rule !== NoUndefinedVariablesRule);
-
-export const isGraphQLTag = (
-  tag: string,
-): tag is "gql" | "query" | "useQuery" | "mutation" | "useMutation" | "subscription" | "useSubscription" => {
-  switch (tag) {
-    case "gql":
-    case "query":
-    case "useQuery":
-    case "mutation":
-    case "useMutation":
-    case "subscription":
-    case "useSubscription":
-      return true;
-    default:
-      return false;
-  }
-};
-
-export const getGraphQLOperation = (tag: string) => {
-  switch (tag) {
-    case "query":
-    case "useQuery":
-      return "query";
-    case "mutation":
-    case "useMutation":
-      return "mutation";
-    case "subscription":
-    case "useSubscription":
-      return "subscription";
-    default:
-      return "";
-  }
-};
-
 export * from "graphql";
+export {
+  GraphQLTag,
+  GraphQLTagOperation,
+  isGraphQLTag,
+  getGraphQLTagOperation,
+  validationRules,
+  buildModel,
+  loadConfig,
+  getSchema,
+  generate,
+};
