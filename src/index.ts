@@ -208,18 +208,18 @@ const format = (data: string, ext: ".js" | ".d.ts" | ".gql" = ".gql") => {
   });
 };
 
+const readFile = (path: string) => {
+  try {
+    return readFileSync(path, "utf-8");
+  } catch {}
+};
+
 const writeFile = (path: string, data: string) => {
   mkdirSync(dirname(path), { recursive: true });
 
-  try {
-    const _data = readFileSync(path, "utf-8");
-
-    if (data === _data) {
-      return;
-    }
-  } catch {}
-
-  writeFileSync(path, data);
+  if (data !== readFile(path)) {
+    writeFileSync(path, data);
+  }
 };
 
 const escapeIdentifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
@@ -1241,14 +1241,7 @@ const loadConfig = () => {
 
 const getSchema = () => {
   const { model: modelPath, ...config } = loadConfig();
-  let model: string;
-
-  try {
-    model = readFileSync(modelPath, "utf-8");
-  } catch (error) {
-    model = format("type User { name: String }");
-  }
-
+  const model = readFile(modelPath) ?? format("type User { name: String }");
   const { fixedModel, ...result } = buildModel(model);
 
   if (model !== fixedModel) {

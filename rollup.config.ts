@@ -3,7 +3,7 @@ import { defineConfig } from "rollup";
 import dts from "rollup-plugin-dts";
 
 const input = Object.fromEntries(
-  ["buildASTSchema", "config", "index", "json", "schema"].map((name) => [name, `./src/${name}.ts`]),
+  ["babel", "buildASTSchema", "config", "index", "json", "schema"].map((name) => [name, `./src/${name}.ts`]),
 );
 
 const ts = typescript();

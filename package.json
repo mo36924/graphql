@@ -1,6 +1,6 @@
 {
   "name": "@mo36924/graphql",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "",
   "keywords": [],
   "homepage": "https://github.com/mo36924/graphql#readme",
@@ -74,6 +74,7 @@
     }
   },
   "dependencies": {
+    "@babel/core": "^7.18.2",
     "change-case": "^4.1.2",
     "cosmiconfig": "^7.0.1",
     "diff": "^5.1.0",
