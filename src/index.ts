@@ -1217,39 +1217,38 @@ const buildModel = (model: string) => {
 
 const loadConfig = () => {
   const _dirname = dirname(fileURLToPath(import.meta.url));
-  const result = cosmiconfigSync("graphql").search(_dirname);
-
-  if (!result) {
-    throw new Error("Not found graphql config.");
-  }
 
   const {
     filepath,
     config: { model, declaration, schema, sql, test },
-  } = result;
-
-  if (!model) {
-    throw new Error("Require graphql model path.");
-  }
+  } = cosmiconfigSync("graphql").search(_dirname) ?? {
+    filepath: resolve(_dirname, "..", "..", "..", "..", "package.json"),
+    config: {},
+  };
 
   const configDir = dirname(filepath);
   const resolveConfigPath = (path?: string) => path && resolve(configDir, path);
 
   return {
     filepath,
-    model: resolveConfigPath(model)!,
-    declaration: resolveConfigPath(declaration || "node_modules/@types/_graphql/index.d.ts"),
+    model: resolveConfigPath(model ?? "index.gql")!,
+    declaration: resolveConfigPath(declaration ?? "node_modules/@types/_graphql/index.d.ts")!,
     schema: resolveConfigPath(schema),
     sql: resolveConfigPath(sql),
     test: resolveConfigPath(test),
   };
 };
 
-const getSchema = () => buildModel(readFileSync(loadConfig().model, "utf-8")).schema;
-
-const generate = () => {
+const getSchema = () => {
   const { model: modelPath, ...config } = loadConfig();
-  const model = readFileSync(modelPath, "utf-8");
+  let model: string;
+
+  try {
+    model = readFileSync(modelPath, "utf-8");
+  } catch (error) {
+    model = format("type User { name: String }");
+  }
+
   const { fixedModel, ...result } = buildModel(model);
 
   if (model !== fixedModel) {
@@ -1265,6 +1264,8 @@ const generate = () => {
       writeFile(config[key]!, result[key === "schema" ? "graphql" : key]);
     }
   }
+
+  return result.schema;
 };
 
 export * from "graphql";
@@ -1277,5 +1278,4 @@ export {
   buildModel,
   loadConfig,
   getSchema,
-  generate,
 };
