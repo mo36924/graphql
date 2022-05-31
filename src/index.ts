@@ -1,15 +1,33 @@
+import { randomUUID as uuid } from "crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
+import { ConfigAPI, PluginObj, types as t } from "@babel/core";
 import { camelCase, pascalCase } from "change-case";
 import { cosmiconfigSync } from "cosmiconfig";
 import { diffChars } from "diff";
 import {
+  DocumentNode,
   FieldDefinitionNode,
+  FieldNode,
+  GraphQLError,
   GraphQLInputField,
+  GraphQLInputType,
+  GraphQLObjectType,
+  GraphQLScalarTypeConfig,
   GraphQLSchema,
+  Kind,
   NoUndefinedVariablesRule,
   ObjectTypeDefinitionNode,
+  ObjectValueNode,
+  OperationDefinitionNode,
+  OperationTypeNode,
+  TokenKind,
+  TypeInfo,
+  TypeNode,
+  ValidationRule,
+  ValueNode,
+  VariableDefinitionNode,
   buildASTSchema as _buildASTSchema,
   getNamedType,
   getNullableType,
@@ -17,17 +35,24 @@ import {
   isInputObjectType,
   isListType,
   isNonNullType,
+  isNullableType,
   isScalarType,
   parse,
   print,
   specifiedRules,
   stripIgnoredCharacters,
+  validate,
+  visit,
+  visitWithTypeInfo,
 } from "graphql";
+import { ExecutionContext } from "graphql/execution/execute";
 import { getArgumentValues } from "graphql/execution/values";
+import { inspect } from "graphql/jsutils/inspect";
 import colors from "picocolors";
 import pluralize from "pluralize";
 import prettier from "prettier";
-import buildASTSchema from "./buildASTSchema";
+
+export * from "graphql";
 
 const primaryKeyTypeName = "UUID";
 const baseScalarTypeNames = ["ID", "Int", "Float", "String", "Boolean"] as const;
@@ -38,8 +63,10 @@ const comparisonOperators = ["eq", "ne", "gt", "lt", "ge", "le", "in", "like"];
 const logicalOperators = ["not", "and", "or"];
 const graphqlTags = ["gql", "query", "useQuery", "mutation", "useMutation", "subscription", "useSubscription"] as const;
 type ScalarTypeName = typeof scalarTypeNames[number];
-type GraphQLTag = typeof graphqlTags[number];
-type GraphQLTagOperation = "" | "query" | "mutation" | "subscription";
+type ComparisonOperator = typeof comparisonOperators[number];
+
+export type GraphQLTag = typeof graphqlTags[number];
+export type GraphQLTagOperation = "" | "query" | "mutation" | "subscription";
 
 const typescriptTypes: { [type in ScalarTypeName]: string } = {
   ID: "string",
@@ -135,8 +162,10 @@ const isSchemaTypeName = (name: string) => schemaTypeNames.includes(name);
 const isReservedTypeName = (name: string) => reservedTypeNames.includes(name);
 const isReservedFieldName = (name: string) => reservedFieldNames.includes(name);
 const isBaseFieldName = (type: string) => baseFieldNames.includes(type);
-const isGraphQLTag = (tag: string): tag is GraphQLTag => graphqlTags.includes(tag as any);
-const validationRules = specifiedRules.filter((rule) => rule !== NoUndefinedVariablesRule);
+
+export const isGraphQLTag = (tag: string): tag is GraphQLTag => graphqlTags.includes(tag as any);
+
+export const validationRules = /*@__PURE__*/ specifiedRules.filter((rule) => rule !== NoUndefinedVariablesRule);
 
 const getTypescriptType = (type: string): string =>
   typescriptTypes.hasOwnProperty(type) ? typescriptTypes[type as ScalarTypeName] : type;
@@ -149,7 +178,7 @@ const getPostgresTypes = (type: string) => {
   throw new Error("Invalid type.");
 };
 
-const getGraphQLTagOperation = (tag: GraphQLTag) => graphqlTagOperations[tag];
+export const getGraphQLTagOperation = (tag: GraphQLTag) => graphqlTagOperations[tag];
 
 const getTypeName = (name: string) => {
   name = pascalCase(pluralize.singular(name));
@@ -192,6 +221,49 @@ const getDirectives = <T extends ObjectTypeDefinitionNode | FieldDefinitionNode>
     return directives;
   }, Object.create(null));
 
+const memoize = <T extends (a1: any, a2: any, a3: any) => any>(fn: T): T => {
+  const cache0 = new Map();
+  return ((a1: any, a2: any, a3: any): any => {
+    let cache1 = cache0.get(a1);
+
+    if (cache1 === undefined) {
+      cache1 = new Map();
+      cache0.set(a1, cache1);
+    }
+
+    let cache2 = cache1.get(a2);
+
+    if (cache2 === undefined) {
+      cache2 = new Map();
+      cache1.set(a2, cache2);
+    }
+
+    let fnResult = cache2.get(a3);
+
+    if (fnResult === undefined) {
+      fnResult = fn(a1, a2, a3);
+      cache2.set(a3, fnResult);
+    }
+
+    return fnResult;
+  }) as any;
+};
+
+const getFieldDefInfo = memoize((schema: GraphQLSchema, parent: string, field: string) => {
+  const def = (schema.getType(parent) as GraphQLObjectType).getFields()[field];
+  const name = field;
+  const fieldType = def.type;
+  const nullable = isNullableType(fieldType);
+  const nullableType = getNullableType(fieldType);
+  const list = isListType(nullableType);
+  const namedType = getNamedType(nullableType);
+  const scalar = isScalarType(namedType);
+  const type = namedType.name;
+  const directives = getDirectives(schema, def.astNode!);
+  const _isBaseFieldName = isBaseFieldName(name);
+  return { schema, parent, def, name, type, scalar, list, nullable, directives, isBaseFieldName: _isBaseFieldName };
+});
+
 const createObject: {
   <T0 = any>(source0?: T0): T0;
   <T0, T1>(source0: T0, source1: T1): T0 & T1;
@@ -225,13 +297,13 @@ const writeFile = (path: string, data: string) => {
 const escapeIdentifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
 
 const escapeLiteral = (value: string | number | boolean | Date | null | undefined) => {
-  if (value === null || value === undefined) {
-    return "NULL";
+  if (value == null) {
+    return "null";
   }
 
   switch (typeof value) {
     case "boolean":
-      return value ? "TRUE" : "FALSE";
+      return value ? "true" : "false";
     case "number":
       return value.toString();
     case "object":
@@ -694,7 +766,6 @@ const printSchema = (types: Types) => {
 
 const buildModelGraphQL = (model: string) => {
   const types = buildTypes(model + customScalars + schemaDirectives);
-
   const baseFields = Object.values(buildTypes(baseType + customScalars))[0].fields;
 
   for (const [typeName, type] of Object.entries(types)) {
@@ -976,6 +1047,122 @@ const buildModelGraphQL = (model: string) => {
   return printSchema(sortTypes(types));
 };
 
+const uuidRegExp =
+  /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
+
+const validateUUID = (uuid: any): string => {
+  if (typeof uuid === "string" && uuidRegExp.test(uuid)) {
+    return uuid;
+  }
+
+  throw new GraphQLError("UUID cannot represent value: ".concat(inspect(uuid)), {});
+};
+
+const _Date: Partial<GraphQLScalarTypeConfig<Date, (string | number)[]>> = {
+  serialize(date) {
+    if (date == null || !(date instanceof Date) || Number.isNaN(date.getTime())) {
+      throw new GraphQLError("Date cannot represent value: ".concat(inspect(date)), {});
+    }
+
+    return [0, date.toJSON()];
+  },
+  parseValue(value: any) {
+    let date: Date;
+
+    if (Array.isArray(value) && value.length === 2 && value[0] === 0 && typeof value[1] === "string") {
+      const value1 = value[1];
+      date = new Date(value1);
+
+      if (value1 !== date.toJSON()) {
+        throw new GraphQLError("Date cannot represent value: ".concat(inspect(value)), {});
+      }
+    } else if (value instanceof Date) {
+      date = value;
+    } else {
+      date = new Date(value);
+    }
+
+    if (Number.isNaN(date.getTime())) {
+      throw new GraphQLError("Date cannot represent value: ".concat(inspect(value)), {});
+    }
+
+    return date;
+  },
+  parseLiteral(valueNode) {
+    if (valueNode.kind !== "StringValue") {
+      throw new GraphQLError("Date cannot represent a non string value: ".concat(print(valueNode)), {
+        nodes: valueNode,
+      });
+    }
+
+    const date = new Date(valueNode.value);
+
+    if (Number.isNaN(date.getTime())) {
+      throw new GraphQLError("Date cannot represent value: ".concat(inspect(valueNode.value)), {});
+    }
+
+    return date;
+  },
+};
+
+const UUID: Partial<GraphQLScalarTypeConfig<string, string>> = {
+  serialize: validateUUID,
+  parseValue: validateUUID,
+  parseLiteral(valueNode) {
+    if (valueNode.kind !== "StringValue") {
+      throw new GraphQLError("UUID cannot represent a non string value: ".concat(print(valueNode)), {
+        nodes: valueNode,
+      });
+    }
+
+    return validateUUID(valueNode.value);
+  },
+};
+
+const parseObject = (ast: ObjectValueNode, variables: any): any => {
+  const value = Object.create(null);
+
+  ast.fields.forEach((field) => {
+    value[field.name.value] = parseLiteral(field.value, variables);
+  });
+
+  return value;
+};
+
+const parseLiteral = (ast: ValueNode, variables: any): any => {
+  switch (ast.kind) {
+    case Kind.STRING:
+    case Kind.BOOLEAN:
+      return ast.value;
+    case Kind.INT:
+    case Kind.FLOAT:
+      return parseFloat(ast.value);
+    case Kind.OBJECT:
+      return parseObject(ast, variables);
+    case Kind.LIST:
+      return ast.values.map((n) => parseLiteral(n, variables));
+    case Kind.NULL:
+      return null;
+    case Kind.VARIABLE: {
+      const name = ast.name.value;
+      return variables ? variables[name] : undefined;
+    }
+  }
+};
+
+const _JSON: Partial<GraphQLScalarTypeConfig<any, any>> = {
+  parseLiteral,
+};
+
+export const buildASTSchema: typeof _buildASTSchema = (documentAST, options) => {
+  const schema = _buildASTSchema(documentAST, options);
+  const typeMap = schema.getTypeMap();
+  Object.assign(typeMap.Date, _Date);
+  Object.assign(typeMap.UUID, UUID);
+  Object.assign(typeMap.JSON, _JSON);
+  return schema;
+};
+
 const buildDeclaration = (schema: GraphQLSchema) => {
   const getFieldType = (field: GraphQLInputField) => {
     const { type, name } = field;
@@ -1190,7 +1377,7 @@ const buildPostgersTestData = (data: ReturnType<typeof buildTestData>) => {
   return sql;
 };
 
-const buildModel = (model: string) => {
+export const buildModel = (model: string) => {
   const fixedModel = fixModel(model);
   const graphql = buildModelGraphQL(fixedModel);
   const document = parse(graphql);
@@ -1215,7 +1402,7 @@ const buildModel = (model: string) => {
   };
 };
 
-const loadConfig = () => {
+export const loadConfig = () => {
   const _dirname = dirname(fileURLToPath(import.meta.url));
 
   const {
@@ -1239,7 +1426,7 @@ const loadConfig = () => {
   };
 };
 
-const getSchema = () => {
+export const getSchema = () => {
   const { model: modelPath, ...config } = loadConfig();
   const model = readFile(modelPath) ?? format("type User { name: String }");
   const { fixedModel, ...result } = buildModel(model);
@@ -1261,14 +1448,669 @@ const getSchema = () => {
   return result.schema;
 };
 
-export * from "graphql";
-export {
-  GraphQLTag,
-  GraphQLTagOperation,
-  isGraphQLTag,
-  getGraphQLTagOperation,
-  validationRules,
-  buildModel,
-  loadConfig,
-  getSchema,
+type QueryContext = ExecutionContext & { values: any[]; ids?: { [type: string]: string[] | undefined } };
+type MutationContext = ExecutionContext & { date: Date; ids: { [type: string]: string[] | undefined } };
+type Queries = [sql: string, values: any[]];
+type MutationQueries = Queries[];
+type UnorderedMutationQueries = [sortKey: any, sql: string, values: any[]][];
+
+export const isQuery = (queries: Queries | MutationQueries): queries is Queries => typeof queries[0] === "string";
+
+export const buildQuery = (context: ExecutionContext) => {
+  switch (context.operation.operation) {
+    case "query":
+      return query(context);
+    case "mutation":
+      return mutation(context);
+    default:
+      throw new GraphQLError(`Unsupported ${context.operation.operation} operation.`, {});
+  }
+};
+
+const query = (context: ExecutionContext, node: OperationDefinitionNode | FieldNode = context.operation): Queries => {
+  const values: any[] = [];
+
+  const sql = `select cast(${fields({ ...context, values }, "Query", node)} as text) as ${
+    node.kind === "OperationDefinition" ? "data" : escapeIdentifier((node.alias ?? node.name).value)
+  };`;
+
+  return [sql, values];
+};
+
+const mutation = (context: ExecutionContext) => {
+  const queries: MutationQueries = [];
+  const date = new Date();
+
+  for (const node of context.operation.selectionSet.selections as FieldNode[]) {
+    const field = node.name.value;
+    const method = field === "create" ? create : field === "update" ? update : field === "delete" ? _delete : undefined;
+
+    if (method) {
+      const info = getFieldDefInfo(context.schema, "Mutation", field);
+
+      queries.push(
+        ...method(
+          { ...context, date, ids: Object.create(null) },
+          node,
+          getArgumentValues(info.def, node, context.variableValues).data as { [field: string]: any },
+        ),
+      );
+    } else {
+      queries.push(query(context, node));
+    }
+  }
+
+  return queries;
+};
+
+const fields = (context: QueryContext, parent: string, node: OperationDefinitionNode | FieldNode) =>
+  `jsonb_build_object(${(node.selectionSet!.selections as FieldNode[])
+    .map((node) => `${escapeLiteral((node.alias ?? node.name).value)},${field(context, parent, node)}`)
+    .join()})`;
+
+const field = (context: QueryContext, parent: string, node: FieldNode) => {
+  const { schema, variableValues, ids, values } = context;
+  const name = node.name.value;
+  const { scalar, type, list, directives, def } = getFieldDefInfo(schema, parent, name);
+
+  if (scalar) {
+    switch (type) {
+      case "Date":
+        return `jsonb_build_array(0,${escapeIdentifier(name)})`;
+      default:
+        return escapeIdentifier(name);
+    }
+  }
+
+  let _ids: string[] | undefined;
+
+  if (ids) {
+    _ids = ids[type];
+
+    if (!_ids) {
+      return list ? `jsonb_build_array()` : "null";
+    }
+  }
+
+  let query: string = `select ${fields(context, type, node)} as data from ${escapeIdentifier(type)}`;
+  const args: { [argument: string]: any } = getArgumentValues(def, node, variableValues);
+  const predicates: string[] = [];
+
+  if (_ids) {
+    predicates.push(`id in (${_ids.map(() => "?").join()})`);
+    values.push(..._ids);
+  }
+
+  if (directives.type) {
+    predicates.push(
+      `id in (select ${escapeIdentifier(directives.type.keys[1])} from ${escapeIdentifier(
+        directives.type.name,
+      )} where ${escapeIdentifier(directives.type.keys[1])} is not null and ${escapeIdentifier(
+        directives.type.keys[0],
+      )} = ${escapeIdentifier(parent)}.id)`,
+    );
+  } else if (directives.field) {
+    predicates.push(`${escapeIdentifier(directives.field.key)} = ${escapeIdentifier(parent)}.id}`);
+  } else if (directives.key) {
+    predicates.push(`id = ${escapeIdentifier(parent)}.${escapeIdentifier(directives.key.name)}`);
+  }
+
+  const _where = where(context, args.where);
+
+  if (_where) {
+    predicates.push(_where);
+  }
+
+  if (predicates.length) {
+    query += ` where ${predicates.join(" and ")}`;
+  }
+
+  const _order = order(args.order);
+
+  if (_order) {
+    query += ` order by ${_order}`;
+  }
+
+  if (!list) {
+    query += ` limit 1`;
+  } else if (args.limit != null) {
+    query += ` limit ?`;
+    values.push(args.limit);
+  }
+
+  if (args.offset != null) {
+    query += ` offset ?`;
+    values.push(args.offset);
+  }
+
+  if (list) {
+    query = `coalesce((select jsonb_agg(data) from (${query}) as t),jsonb_build_array())`;
+  }
+
+  return query;
+};
+
+const where = (context: QueryContext, args: { [key: string]: any } | null | undefined) => {
+  if (!args) {
+    return "";
+  }
+
+  const { not, and, or, ...fields } = args;
+  const values = context.values;
+  let predicates: string[] = [];
+
+  for (const [field, operators] of Object.entries(fields)) {
+    if (operators == null) {
+      continue;
+    }
+
+    for (const [operator, value] of Object.entries(operators) as [ComparisonOperator, any][]) {
+      if (value === null) {
+        if (operator === "eq") {
+          predicates.push(`${escapeIdentifier(field)} is null`);
+        } else if (operator === "ne") {
+          predicates.push(`${escapeIdentifier(field)} is not null`);
+        }
+
+        continue;
+      }
+
+      switch (operator) {
+        case "eq":
+          predicates.push(`${escapeIdentifier(field)} = ?`);
+          values.push(value);
+          break;
+        case "ne":
+          predicates.push(`${escapeIdentifier(field)} <> ?`);
+          values.push(value);
+          break;
+        case "gt":
+          predicates.push(`${escapeIdentifier(field)} > ?`);
+          values.push(value);
+          break;
+        case "lt":
+          predicates.push(`${escapeIdentifier(field)} < ?`);
+          values.push(value);
+          break;
+        case "ge":
+          predicates.push(`${escapeIdentifier(field)} >= ?`);
+          values.push(value);
+          break;
+        case "le":
+          predicates.push(`${escapeIdentifier(field)} <= ?`);
+          values.push(value);
+          break;
+        case "in":
+          predicates.push(`${escapeIdentifier(field)} in (${value.map(() => "?").join()})`);
+          values.push(...value);
+          break;
+        case "like":
+          predicates.push(`${escapeIdentifier(field)} like ?`);
+          values.push(value);
+          break;
+      }
+    }
+  }
+
+  const _not = where(context, not);
+
+  if (_not) {
+    predicates.push(`not ${_not}`);
+  }
+
+  const _and = where(context, and);
+
+  if (_and) {
+    predicates.push(_and);
+  }
+
+  if (predicates.length) {
+    predicates = [predicates.join(" and ")];
+  }
+
+  const _or = where(context, or);
+
+  if (_or) {
+    predicates.push(_or);
+  }
+
+  if (!predicates.length) {
+    return "";
+  }
+
+  return `(${predicates.join(" or ")})`;
+};
+
+const order = (args: { [key: string]: string } | null | undefined) =>
+  args
+    ? Object.entries(args)
+        .map(([field, order]) => `${escapeIdentifier(field)} ${order}`)
+        .join()
+    : "";
+
+const create = (context: MutationContext, node: FieldNode, data: { [field: string]: any }) => {
+  const queries: MutationQueries = [];
+  const schema = context.schema;
+
+  for (const [field, value] of Object.entries(data)) {
+    if (value == null) {
+      continue;
+    }
+
+    const { list, type } = getFieldDefInfo(schema, "Query", field);
+
+    if (list) {
+      for (const _value of value) {
+        queries.push(...createQueries(context, type, { ..._value, id: uuid() }));
+      }
+    } else {
+      queries.push(...createQueries(context, type, { ...value, id: uuid() }));
+    }
+  }
+
+  queries.push(query(context, node));
+  return queries;
+};
+
+const createQueries = (
+  context: MutationContext,
+  parent: string,
+  data: { id: string; [field: string]: any },
+): MutationQueries => {
+  const { schema, date, ids } = context;
+  const id = data.id;
+  const columns: string[] = [...baseFieldNames];
+  const values: any[] = [id, uuid(), date, date];
+  const pre: MutationQueries = [];
+  const post: MutationQueries = [];
+  (ids[parent] ??= []).push(id);
+
+  for (const [field, value] of Object.entries(data)) {
+    const { type, scalar, list, directives, isBaseFieldName } = getFieldDefInfo(schema, parent, field);
+
+    if (isBaseFieldName) {
+      continue;
+    }
+
+    if (scalar) {
+      columns.push(field);
+      values.push(value);
+      continue;
+    }
+
+    if (value == null) {
+      continue;
+    }
+
+    if (directives.type) {
+      const insert = `insert into ${escapeIdentifier(directives.type.name)} (${[
+        ...baseFieldNames,
+        directives.type.keys[0],
+        directives.type.keys[1],
+      ]
+        .map(escapeIdentifier)
+        .join()}) values `;
+
+      for (const data of value) {
+        const _id = uuid();
+
+        post.push(...createQueries(context, type, { ...data, id: _id }), [
+          `${insert}(?,?,?,?,?,?);`,
+          [uuid(), uuid(), date, date, id, _id],
+        ]);
+      }
+    } else if (directives.key) {
+      const id = uuid();
+      columns.push(directives.key.name);
+      values.push(id);
+      pre.push(...createQueries(context, type, { ...value, id }));
+    } else if (directives.field) {
+      if (list) {
+        for (const data of value) {
+          post.push(...createQueries(context, type, { ...data, id: uuid(), [directives.field.key]: id }));
+        }
+      } else {
+        post.push(...createQueries(context, type, { ...value, id: uuid(), [directives.field.key]: id }));
+      }
+    }
+  }
+
+  return [
+    ...pre,
+    [
+      `insert into ${escapeIdentifier(parent)} (${columns.map(escapeIdentifier).join()}) values (${values
+        .map(() => "?")
+        .join()});`,
+      values,
+    ],
+    ...post,
+  ];
+};
+
+const sortMutationQueries = (queries: UnorderedMutationQueries): MutationQueries =>
+  queries
+    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .map(([_, sql, values]): [sql: string, values: any[]] => [sql, values]);
+
+const update = (context: MutationContext, node: FieldNode, data: { [field: string]: any }): MutationQueries => {
+  const mutationQueries: UnorderedMutationQueries = [];
+
+  for (const [field, value] of Object.entries(data)) {
+    if (value == null) {
+      continue;
+    }
+
+    const { list, type } = getFieldDefInfo(context.schema, "Query", field);
+
+    if (list) {
+      for (const _value of value) {
+        mutationQueries.push(...updateQueries(context, type, _value));
+      }
+    } else {
+      mutationQueries.push(...updateQueries(context, type, value));
+    }
+  }
+
+  const queries = sortMutationQueries(mutationQueries);
+  queries.push(query(context, node));
+  return queries;
+};
+
+const updateQueries = (
+  context: MutationContext,
+  parent: string,
+  data: { id: string; version: string; [field: string]: any },
+): UnorderedMutationQueries => {
+  const queries: UnorderedMutationQueries = [];
+  const { schema, date, ids } = context;
+  const { id, version } = data;
+  const values: any[] = [];
+  const setValues: any[] = [];
+  const whereValues: any[] = [];
+  let set = `set version=?,"updatedAt"=?`;
+  setValues.push(uuid(), date);
+  let where = `where id=? and version=?`;
+  whereValues.push(id, version);
+  (ids[parent] ??= []).push(id);
+
+  for (const [field, value] of Object.entries(data)) {
+    const { type, scalar, list, directives, isBaseFieldName } = getFieldDefInfo(schema, parent, field);
+
+    if (isBaseFieldName) {
+      continue;
+    }
+
+    if (directives.ref) {
+      if (value != null) {
+        where += ` and ${escapeIdentifier(field)}=?`;
+        whereValues.push(value);
+      }
+
+      continue;
+    }
+
+    if (scalar) {
+      set += `,${escapeIdentifier(field)}=?`;
+      setValues.push(value);
+      continue;
+    }
+
+    if (value == null) {
+      continue;
+    }
+
+    if (directives.type) {
+      const update = `update ${escapeIdentifier(
+        directives.type.name,
+      )} set version=?,"updatedAt"=? where ${escapeIdentifier(directives.type.keys[0])}=? and ${escapeIdentifier(
+        directives.type.keys[1],
+      )}=?;`;
+
+      for (const data of value) {
+        const _id = data.id;
+        queries.push(...updateQueries(context, type, data), [id < _id ? id : _id, update, [uuid(), date, id, _id]]);
+      }
+    } else if (directives.key) {
+      where += ` and ${escapeIdentifier(directives.key.name)}=?`;
+      whereValues.push(value.id);
+      queries.push(...updateQueries(context, type, value));
+    } else if (directives.field) {
+      if (list) {
+        for (const data of value) {
+          queries.push(...updateQueries(context, type, { ...data, [directives.field.key]: id }));
+        }
+      } else {
+        queries.push(...updateQueries(context, type, { ...value, [directives.field.key]: id }));
+      }
+    }
+  }
+
+  queries.push([id, `update ${escapeIdentifier(parent)} ${set} ${where};`, [...setValues, ...whereValues]]);
+  return queries;
+};
+
+const _delete = (context: MutationContext, node: FieldNode, data: { [field: string]: any }) => {
+  const mutationQueries: UnorderedMutationQueries = [];
+
+  for (const [field, value] of Object.entries(data)) {
+    if (value == null) {
+      continue;
+    }
+
+    const { list, type } = getFieldDefInfo(context.schema, "Query", field);
+
+    if (list) {
+      for (const _value of value) {
+        mutationQueries.push(...deleteQueries(context, type, _value));
+      }
+    } else {
+      mutationQueries.push(...deleteQueries(context, type, value));
+    }
+  }
+
+  const queries = sortMutationQueries(mutationQueries);
+  queries.unshift(query(context, node));
+  return queries;
+};
+
+const deleteQueries = (
+  context: MutationContext,
+  parent: string,
+  data: { id: string; version: string; [field: string]: any },
+): UnorderedMutationQueries => {
+  const queries: UnorderedMutationQueries = [];
+  const { schema, ids } = context;
+  const { id, version } = data;
+  const values: any[] = [];
+  let where = `where id=? and version=?`;
+  values.push(id, version);
+  (ids[parent] ??= []).push(id);
+
+  for (const [field, value] of Object.entries(data)) {
+    if (value == null) {
+      continue;
+    }
+
+    const { type, scalar, list, directives } = getFieldDefInfo(schema, parent, field);
+
+    if (directives.ref) {
+      if (value) {
+        where += ` and ${escapeIdentifier(field)}=?`;
+        values.push(value);
+      }
+
+      continue;
+    }
+
+    if (scalar) {
+      continue;
+    }
+
+    if (directives.type) {
+      const _delete = `delete from ${escapeIdentifier(directives.type.name)} where ${escapeIdentifier(
+        directives.type.keys[0],
+      )}=? and ${escapeIdentifier(directives.type.keys[1])}=?;`;
+
+      for (const data of value) {
+        const _id = data.id;
+        queries.push(...deleteQueries(context, type, data), [id < _id ? id : _id, _delete, [id, _id]]);
+      }
+    } else if (directives.key) {
+      where += ` and ${escapeIdentifier(directives.key.name)}=?`;
+      values.push(value.id);
+      queries.push(...deleteQueries(context, type, value));
+    } else if (directives.field) {
+      if (list) {
+        for (const data of value) {
+          queries.push(...deleteQueries(context, type, { ...data, [directives.field.key]: id }));
+        }
+      } else {
+        queries.push(...deleteQueries(context, type, { ...value, [directives.field.key]: id }));
+      }
+    }
+  }
+
+  queries.push([id, `delete from ${escapeIdentifier(parent)} ${where};`, values]);
+  return queries;
+};
+
+// json
+const reviver = (_key: string, value: any) => {
+  if (Array.isArray(value) && value.length === 2 && typeof value[0] === "number" && typeof value[1] === "string") {
+    switch (value[0]) {
+      case 0:
+        return new Date(value[1]);
+    }
+  }
+
+  return value;
+};
+
+export const jsonParse = (data: string) => JSON.parse(data, reviver);
+
+// babel
+export type Options = {
+  schema?: GraphQLSchema;
+  rules?: ValidationRule[];
+};
+
+let _schema: GraphQLSchema;
+
+const toAst = (type: GraphQLInputType): TypeNode => {
+  if (isListType(type)) {
+    return { kind: Kind.LIST_TYPE, type: toAst(type.ofType) };
+  } else if (isNonNullType(type)) {
+    return { kind: Kind.NON_NULL_TYPE, type: toAst(type.ofType) as any };
+  }
+
+  return { kind: Kind.NAMED_TYPE, name: { kind: Kind.NAME, value: type.name } };
+};
+
+export const babel = (_api: ConfigAPI, options: Options): PluginObj => {
+  const schema = options.schema ?? (_schema ??= getSchema());
+  const rules = options.rules;
+
+  return {
+    name: "graphql",
+    visitor: {
+      TaggedTemplateExpression(path) {
+        const {
+          tag,
+          quasi: { quasis, expressions },
+        } = path.node;
+
+        if (!t.isIdentifier(tag)) {
+          return;
+        }
+
+        const _tag = tag.name;
+
+        if (!isGraphQLTag(_tag)) {
+          return;
+        }
+
+        const operation = getGraphQLTagOperation(_tag);
+
+        let query = quasis
+          .map(({ value: { cooked, raw } }) => cooked ?? raw)
+          .reduce((query, value, i) => `${query}$_${i - 1}${value}`);
+
+        let document: DocumentNode;
+
+        try {
+          document = parse(operation + query);
+        } catch (err) {
+          throw path.buildCodeFrameError(String(err));
+        }
+
+        let inputTypes: GraphQLInputType[] = [];
+        const typeInfo = new TypeInfo(schema);
+
+        document = visit(
+          document,
+          visitWithTypeInfo(typeInfo, {
+            OperationDefinition: {
+              enter() {
+                inputTypes = [];
+              },
+              leave(node): OperationDefinitionNode | void {
+                const _operation =
+                  node.loc!.startToken.kind === TokenKind.BRACE_L
+                    ? ((operation || "query") as OperationTypeNode)
+                    : node.operation;
+
+                if (!inputTypes.length) {
+                  return { ...node, operation: _operation };
+                }
+
+                const variableDefinitions = [
+                  ...node.variableDefinitions!,
+                  ...inputTypes.map(
+                    (inputType, i): VariableDefinitionNode => ({
+                      kind: Kind.VARIABLE_DEFINITION,
+                      variable: { kind: Kind.VARIABLE, name: { kind: Kind.NAME, value: `_${i}` } },
+                      type: toAst(inputType),
+                    }),
+                  ),
+                ];
+
+                return {
+                  ...node,
+                  operation: _operation,
+                  variableDefinitions: variableDefinitions,
+                };
+              },
+            },
+            Variable(node) {
+              if (/^_\d+/.test(node.name.value)) {
+                inputTypes.push(typeInfo.getInputType()!);
+              }
+            },
+          }),
+        );
+
+        const errors = validate(schema, document, rules);
+
+        if (errors.length) {
+          throw path.buildCodeFrameError(errors[0].message);
+        }
+
+        query = stripIgnoredCharacters(print(document));
+        const properties: t.ObjectProperty[] = [t.objectProperty(t.identifier("query"), t.stringLiteral(query))];
+
+        if (expressions.length) {
+          properties.push(
+            t.objectProperty(
+              t.identifier("variables"),
+              t.objectExpression(
+                expressions.map((expression, i) => t.objectProperty(t.identifier("_" + i), expression as t.Expression)),
+              ),
+            ),
+          );
+        }
+
+        path.replaceWith(t.callExpression(tag, [t.objectExpression(properties)]));
+      },
+    },
+  };
 };

@@ -1,6 +1,6 @@
 {
   "name": "@mo36924/graphql",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "",
   "keywords": [],
   "homepage": "https://github.com/mo36924/graphql#readme",
@@ -98,6 +98,7 @@
     "rollup": "^2.74.1",
     "rollup-plugin-dts": "^4.2.2",
     "sort-package-json": "^1.57.0",
+    "sql-formatter": "^6.1.2",
     "typescript": "^4.7.2"
   },
   "publishConfig": {
