@@ -1,0 +1,52 @@
+{
+  "name": "@mo36924/graphql",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "",
+  "author": "mo36924",
+  "license": "MIT",
+  "homepage": "https://github.com/mo36924/graphql#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mo36924/graphql.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mo36924/graphql/issues"
+  },
+  "keywords": [
+    "graphql",
+    "database"
+  ],
+  "main": "index.js",
+  "scripts": {
+    "build": "rollup -c --configPlugin swc",
+    "clean": "del dist",
+    "lint": "run-s lint:*",
+    "lint:eslint": "eslint .",
+    "lint:prettier": "prettier --check .",
+    "lint:typescript": "tsc --noEmit",
+    "fix": "run-s fix:*",
+    "fix:eslint": "eslint --fix .",
+    "fix:prettier": "prettier --write .",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "graphql": "^16.8.1"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^2.16.1",
+    "@rollup/plugin-swc": "^0.3.0",
+    "del-cli": "^5.1.0",
+    "eslint": "9.2.0",
+    "npm-run-all2": "^6.1.2",
+    "prettier": "^3.2.5",
+    "prettier-plugin-sh": "^0.14.0",
+    "rollup": "^4.17.2",
+    "rollup-plugin-dts": "^6.1.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "overrides": {
+    "eslint": "9.2.0"
+  }
+}
