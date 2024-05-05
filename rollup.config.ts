@@ -16,6 +16,7 @@ export default defineConfig([
       dir: "dist",
       format: "module",
       entryFileNames: "[name].js",
+      chunkFileNames: "[name]-[hash].js",
       generatedCode: { arrowFunctions: true, constBindings: true, objectShorthand: true },
     },
     plugins: [
@@ -42,6 +43,7 @@ export default defineConfig([
       dir: "dist",
       format: "commonjs",
       entryFileNames: "[name].cjs",
+      chunkFileNames: "[name]-[hash].cjs",
       generatedCode: { arrowFunctions: true, constBindings: true, objectShorthand: true },
     },
     plugins: [
