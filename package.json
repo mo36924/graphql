@@ -1,7 +1,7 @@
 {
   "name": "@mo36924/graphql",
   "type": "module",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "",
   "author": "mo36924",
   "license": "MIT",
@@ -18,6 +18,18 @@
     "database"
   ],
   "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    },
+    "./babelPluginGraphQL": {
+      "types": "./dist/babelPluginGraphQL.d.ts",
+      "import": "./dist/babelPluginGraphQL.js",
+      "require": "./dist/babelPluginGraphQL.cjs",
+      "default": "./dist/babelPluginGraphQL.js"
+    },
     "./d1": {
       "types": "./dist/d1.d.ts",
       "import": "./dist/d1.js",
@@ -59,6 +71,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@babel/core": "^7.24.5",
     "@prettier/sync": "^0.5.2",
     "change-case": "^4.1.2",
     "graphql": "^16.8.1",
@@ -71,6 +84,7 @@
     "@antfu/eslint-config": "^2.16.1",
     "@cloudflare/workers-types": "^4.20240502.0",
     "@rollup/plugin-swc": "^0.3.0",
+    "@types/babel__core": "^7.20.5",
     "@types/node": "^20.12.8",
     "@types/pluralize": "^0.0.33",
     "del-cli": "^5.1.0",
