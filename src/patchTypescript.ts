@@ -1,19 +1,18 @@
+/* eslint-disable ts/consistent-type-imports */
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import graphql from "graphql";
-import graphqlLanguageService from "graphql-language-service";
+import { CompletionItemKind } from "graphql-language-service";
 import ts from "typescript";
-import vscodeLanguageserverTypes from "vscode-languageserver-types";
-import { getGraphQLSchema } from "./getGraphQLSchema";
+import { DiagnosticSeverity } from "vscode-languageserver-types";
 
-const _graphql = graphql;
-const _graphqlLanguageService = graphqlLanguageService;
-const _getGraphQLSchema = getGraphQLSchema;
+declare const graphql: typeof import("graphql");
+declare const graphqlLanguageService: typeof import("graphql-language-service");
+declare const getGraphQLSchema: typeof import("./getGraphQLSchema").getGraphQLSchema;
 
 const useStrict = `
 "use strict";
-const _graphql = require("graphql");
-const _graphqlLanguageService = require("graphql-language-service");
-const { getGraphQLSchema: _getGraphQLSchema } = require("@mo36924/graphql/getGraphQLSchema");
+const graphql = require("graphql");
+const graphqlLanguageService = require("graphql-language-service");
+const { getGraphQLSchema } = require("@mo36924/graphql/getGraphQLSchema");
 `;
 
 declare const {
@@ -54,7 +53,7 @@ function getEffectiveTemplateStringsArrayType(node: ts.TaggedTemplateExpression)
     visitWithTypeInfo,
     specifiedRules,
     NoUndefinedVariablesRule,
-  } = _graphql;
+  } = graphql;
 
   const isQueryTag = ({ tag }: ts.TaggedTemplateExpression) => isIdentifier(tag) && tag.escapedText === "gql";
 
@@ -101,7 +100,7 @@ function getEffectiveTemplateStringsArrayType(node: ts.TaggedTemplateExpression)
     return;
   }
   const validationRules = specifiedRules.filter((rule) => rule !== NoUndefinedVariablesRule);
-  const graphqlSchema = _getGraphQLSchema();
+  const graphqlSchema = getGraphQLSchema();
   const errors = validate(graphqlSchema, documentNode, validationRules);
   if (errors.length) {
     return;
@@ -184,7 +183,7 @@ function getEffectiveTemplateStringsArrayType(node: ts.TaggedTemplateExpression)
 }
 
 function createLanguageService(...args: Parameters<typeof _createLanguageService>): ts.LanguageService {
-  const { GraphQLError } = _graphql;
+  const { GraphQLError } = graphql;
   const {
     CompletionItemKind,
     DIAGNOSTIC_SEVERITY,
@@ -193,14 +192,12 @@ function createLanguageService(...args: Parameters<typeof _createLanguageService
     getTokenAtPosition,
     getAutocompleteSuggestions,
     getHoverInformation,
-  } = _graphqlLanguageService;
+  } = graphqlLanguageService;
 
   const isQueryTag = (node: ts.Node): node is ts.TaggedTemplateExpression =>
     isTaggedTemplateExpression(node) && isIdentifier(node.tag) && node.tag.escapedText === "gql";
 
-  const getScriptElementKind = (
-    completionItemKind: graphqlLanguageService.CompletionItemKind | undefined,
-  ): ts.ScriptElementKind => {
+  const getScriptElementKind = (completionItemKind: CompletionItemKind | undefined): ts.ScriptElementKind => {
     switch (completionItemKind) {
       case CompletionItemKind.Function:
       case CompletionItemKind.Constructor:
@@ -213,9 +210,7 @@ function createLanguageService(...args: Parameters<typeof _createLanguageService
     }
   };
 
-  const getDiagnosticCategory = (
-    diagnosticSeverity: vscodeLanguageserverTypes.DiagnosticSeverity | undefined,
-  ): ts.DiagnosticCategory => {
+  const getDiagnosticCategory = (diagnosticSeverity: DiagnosticSeverity | undefined): ts.DiagnosticCategory => {
     switch (diagnosticSeverity) {
       case DIAGNOSTIC_SEVERITY.Warning:
         return DiagnosticCategory.Warning;
@@ -303,7 +298,7 @@ function createLanguageService(...args: Parameters<typeof _createLanguageService
     }
 
     const field = query.match(/\w+/)?.[0] ?? "";
-    const graphqlSchema = _getGraphQLSchema();
+    const graphqlSchema = getGraphQLSchema();
     const isMutation = !!graphqlSchema.getMutationType()?.getFields()[field];
     const operation = isMutation ? "mutation" : "query";
     query = operation + query.replace(/\n|\r/g, " ");
@@ -333,7 +328,7 @@ function createLanguageService(...args: Parameters<typeof _createLanguageService
       const { query, offset } = normalizeQuery(tag);
       const cursor = new Position(0, position - offset);
       const token = getTokenAtPosition(query, cursor);
-      const graphqlSchema = _getGraphQLSchema();
+      const graphqlSchema = getGraphQLSchema();
       const marked = getHoverInformation(graphqlSchema, query, cursor, token);
 
       if (marked === "" || typeof marked !== "string") {
@@ -365,7 +360,7 @@ function createLanguageService(...args: Parameters<typeof _createLanguageService
 
       const { query, offset } = normalizeQuery(tag);
       const cursor = new Position(0, position - offset);
-      const graphqlSchema = _getGraphQLSchema();
+      const graphqlSchema = getGraphQLSchema();
       const items = getAutocompleteSuggestions(graphqlSchema, query, cursor);
 
       if (/^\s*{\s*}\s*$/.test(query)) {
@@ -406,7 +401,7 @@ function createLanguageService(...args: Parameters<typeof _createLanguageService
         if (isQueryTag(node)) {
           try {
             const { query, offset } = normalizeQuery(node);
-            const graphqlSchema = _getGraphQLSchema();
+            const graphqlSchema = getGraphQLSchema();
             const _diagnostics = getDiagnostics(query, graphqlSchema);
 
             for (const {
