@@ -1,7 +1,7 @@
 {
   "name": "@mo36924/graphql",
   "type": "module",
-  "version": "0.0.1",
+  "version": "3.0.0",
   "description": "",
   "author": "mo36924",
   "license": "MIT",
@@ -17,7 +17,37 @@
     "graphql",
     "database"
   ],
-  "main": "index.js",
+  "exports": {
+    "./d1": {
+      "types": "./dist/d1.d.ts",
+      "import": "./dist/d1.js",
+      "require": "./dist/d1.cjs",
+      "default": "./dist/d1.js"
+    },
+    "./getGraphQLSchema": {
+      "types": "./dist/getGraphQLSchema.d.ts",
+      "import": "./dist/getGraphQLSchema.js",
+      "require": "./dist/getGraphQLSchema.cjs",
+      "default": "./dist/getGraphQLSchema.js"
+    },
+    "./patchPrettier": {
+      "types": "./dist/patchPrettier.d.ts",
+      "import": "./dist/patchPrettier.js",
+      "require": "./dist/patchPrettier.cjs",
+      "default": "./dist/patchPrettier.js"
+    },
+    "./patchTypescript": {
+      "types": "./dist/patchTypescript.d.ts",
+      "import": "./dist/patchTypescript.js",
+      "require": "./dist/patchTypescript.cjs",
+      "default": "./dist/patchTypescript.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rollup -c --configPlugin swc",
     "clean": "del dist",
@@ -31,22 +61,34 @@
     "test": "vitest"
   },
   "dependencies": {
-    "graphql": "^16.8.1"
+    "@prettier/sync": "^0.5.2",
+    "change-case": "^5.4.4",
+    "graphql": "^16.8.1",
+    "graphql-language-service": "^5.2.0",
+    "graphql-scalars": "^1.23.0",
+    "pluralize": "^8.0.0",
+    "prettier": "^3.2.5"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^2.16.1",
+    "@cloudflare/workers-types": "^4.20240502.0",
     "@rollup/plugin-swc": "^0.3.0",
+    "@types/node": "^20.12.8",
+    "@types/pluralize": "^0.0.33",
     "del-cli": "^5.1.0",
     "eslint": "9.2.0",
     "npm-run-all2": "^6.1.2",
-    "prettier": "^3.2.5",
     "prettier-plugin-sh": "^0.14.0",
     "rollup": "^4.17.2",
     "rollup-plugin-dts": "^6.1.0",
     "typescript": "^5.4.5",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "vscode-languageserver-types": "^3.17.5"
   },
   "overrides": {
     "eslint": "9.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
