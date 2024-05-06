@@ -1,11 +1,12 @@
 /* eslint-disable ts/consistent-type-imports */
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CompletionItemKind } from "graphql-language-service";
 import { buildSync } from "esbuild";
 import ts from "typescript";
 import { DiagnosticSeverity } from "vscode-languageserver-types";
+import { nodeModulesPath } from "./paths";
 
 declare const graphql: typeof import("graphql");
 declare const graphqlLanguageService: typeof import("graphql-language-service");
@@ -463,16 +464,16 @@ const result = buildSync({
 });
 
 const code = `
-    const { graphql, graphqlLanguageService, getGraphQLSchema } = (() => {
-      var exports = {}
-      var module = { exports };
-      ${result.outputFiles[0]?.text ?? ""}
-      return module.exports;
-    })();
-  `;
+const { graphql, graphqlLanguageService, getGraphQLSchema } = (() => {
+  var exports = {}
+  var module = { exports };
+  ${result.outputFiles[0]?.text ?? ""}
+  return module.exports;
+})();
+`;
 
 for (const name of ["tsc", "tsserver"]) {
-  const src = `node_modules/typescript/lib/${name}.js`;
+  const src = join(nodeModulesPath, "typescript", "lib", `${name}.js`);
   const dest = `${src}_`;
   if (!existsSync(dest)) {
     copyFileSync(src, dest);

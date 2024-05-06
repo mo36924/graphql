@@ -1,6 +1,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { nodeModulesPath } from "./paths";
 
-const path = "node_modules/graphql/package.json";
+const path = join(nodeModulesPath, "graphql", "package.json");
 const pkg = JSON.parse(readFileSync(path, "utf-8"));
 const code = JSON.stringify(
   {

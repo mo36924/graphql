@@ -1,7 +1,9 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { nodeModulesPath } from "./paths";
 
 for (const extension of ["js", "mjs"]) {
-  const src = `node_modules/prettier/plugins/estree.${extension}`;
+  const src = join(nodeModulesPath, "prettier", "plugins", `estree.${extension}`);
   const dest = `${src}_`;
   if (!existsSync(dest)) {
     copyFileSync(src, dest);
