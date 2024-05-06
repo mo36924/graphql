@@ -439,31 +439,30 @@ function createLanguageService(...args: Parameters<typeof _createLanguageService
   };
 }
 
-export const patchTypescript = () => {
-  const result = buildSync({
-    bundle: true,
-    write: false,
-    platform: "node",
-    mainFields: ["module", "main"],
-    resolveExtensions: [".ts", ".mjs", ".js", ".cjs"],
-    logLevel: "error",
-    external: ["prettier", "@prettier/sync"],
-    banner: { js: "var _importMetaUrl = require('url').pathToFileURL(__filename).href;" },
-    define: {
-      "import.meta.url": "_importMetaUrl",
-    },
-    stdin: {
-      contents: `
+const result = buildSync({
+  bundle: true,
+  write: false,
+  platform: "node",
+  mainFields: ["module", "main"],
+  resolveExtensions: [".ts", ".mjs", ".js", ".cjs"],
+  logLevel: "error",
+  external: ["prettier", "@prettier/sync"],
+  banner: { js: "var _importMetaUrl = require('url').pathToFileURL(__filename).href;" },
+  define: {
+    "import.meta.url": "_importMetaUrl",
+  },
+  stdin: {
+    contents: `
         export * as graphql from "graphql"
         export * as graphqlLanguageService from "graphql"
         export { getGraphQLSchema } from "./getGraphQLSchema"
       `,
-      loader: "ts",
-      resolveDir: dirname(fileURLToPath(import.meta.url)),
-    },
-  });
+    loader: "ts",
+    resolveDir: dirname(fileURLToPath(import.meta.url)),
+  },
+});
 
-  const code = `
+const code = `
     const { graphql, graphqlLanguageService, getGraphQLSchema } = (() => {
       var exports = {}
       var module = { exports };
@@ -472,21 +471,20 @@ export const patchTypescript = () => {
     })();
   `;
 
-  for (const name of ["tsc", "tsserver"]) {
-    const src = `node_modules/typescript/lib/${name}.js`;
-    const dest = `${src}_`;
-    if (!existsSync(dest)) {
-      copyFileSync(src, dest);
-    }
-    writeFileSync(
-      src,
-      readFileSync(dest, "utf-8")
-        .replace('"use strict";', (match) => match + code)
-        .replace(
-          /function getEffectiveCallArguments[\s\S]*?(?=getGlobalTemplateStringsArrayType)/,
-          (match) => `${getEffectiveTemplateStringsArrayType}${match}getEffectiveTemplateStringsArrayType(node)||`,
-        )
-        .replace("function createLanguageService(", () => `${createLanguageService}function _createLanguageService(`),
-    );
+for (const name of ["tsc", "tsserver"]) {
+  const src = `node_modules/typescript/lib/${name}.js`;
+  const dest = `${src}_`;
+  if (!existsSync(dest)) {
+    copyFileSync(src, dest);
   }
-};
+  writeFileSync(
+    src,
+    readFileSync(dest, "utf-8")
+      .replace('"use strict";', (match) => match + code)
+      .replace(
+        /function getEffectiveCallArguments[\s\S]*?(?=getGlobalTemplateStringsArrayType)/,
+        (match) => `${getEffectiveTemplateStringsArrayType}${match}getEffectiveTemplateStringsArrayType(node)||`,
+      )
+      .replace("function createLanguageService(", () => `${createLanguageService}function _createLanguageService(`),
+  );
+}

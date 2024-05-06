@@ -1,7 +1,7 @@
 {
   "name": "@mo36924/graphql",
   "type": "module",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "description": "",
   "author": "mo36924",
   "license": "MIT",
@@ -42,21 +42,18 @@
       "require": "./dist/getGraphQLSchema.cjs",
       "default": "./dist/getGraphQLSchema.js"
     },
-    "./patchPrettier": {
-      "types": "./dist/patchPrettier.d.ts",
-      "import": "./dist/patchPrettier.js",
-      "require": "./dist/patchPrettier.cjs",
-      "default": "./dist/patchPrettier.js"
-    },
-    "./patchTypescript": {
-      "types": "./dist/patchTypescript.d.ts",
-      "import": "./dist/patchTypescript.js",
-      "require": "./dist/patchTypescript.cjs",
-      "default": "./dist/patchTypescript.js"
+    "./patch": {
+      "types": "./dist/patch.d.ts",
+      "import": "./dist/patch.js",
+      "require": "./dist/patch.cjs",
+      "default": "./dist/patch.js"
     }
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "patch-graphql": "./dist/patch.js"
+  },
   "files": [
     "dist"
   ],
@@ -70,7 +67,8 @@
     "fix": "run-s fix:*",
     "fix:eslint": "eslint --fix .",
     "fix:prettier": "prettier --write .",
-    "test": "vitest"
+    "test": "vitest",
+    "postinstall": "node -e \"import('./dist/patch.js').catch(()=>{})\""
   },
   "dependencies": {
     "@babel/core": "^7.24.5",
@@ -86,6 +84,7 @@
   "devDependencies": {
     "@antfu/eslint-config": "^2.16.1",
     "@cloudflare/workers-types": "^4.20240502.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-swc": "^0.3.0",
     "@types/babel__core": "^7.20.5",
     "@types/node": "^20.12.8",
@@ -96,6 +95,7 @@
     "prettier-plugin-sh": "^0.14.0",
     "rollup": "^4.17.2",
     "rollup-plugin-dts": "^6.1.0",
+    "rollup-plugin-preserve-shebang": "^1.0.1",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0",
     "vscode-languageserver-types": "^3.17.5"

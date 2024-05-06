@@ -1,8 +1,7 @@
 import { expect, it } from "vitest";
-import { patchPrettier } from "./patchPrettier";
 
 it("patchPrettier", async () => {
-  patchPrettier();
+  await import("./patchPrettier");
   // eslint-disable-next-line no-template-curly-in-string
   const code = "gql`{users(limit:${i}){id,name}}`";
   const { resolveConfig, format } = await import("prettier");

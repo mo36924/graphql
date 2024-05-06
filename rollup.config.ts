@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
 import swc from "@rollup/plugin-swc";
 import { defineConfig } from "rollup";
 import { dts } from "rollup-plugin-dts";
+import shebang from "rollup-plugin-preserve-shebang";
 
 const input = Object.fromEntries(
   Object.keys(JSON.parse(readFileSync("package.json", "utf-8")).exports)
@@ -12,59 +14,31 @@ const input = Object.fromEntries(
 export default defineConfig([
   {
     input,
-    output: {
-      dir: "dist",
-      format: "module",
-      entryFileNames: "[name].js",
-      chunkFileNames: "[name]-[hash].js",
-      hoistTransitiveImports: false,
-      generatedCode: { arrowFunctions: true, constBindings: true, objectShorthand: true },
-    },
-    plugins: [
-      swc(),
+    output: [
       {
-        name: "resolve",
-        resolveId(source, importer) {
-          if (source[0] === "." && !source.endsWith(".ts")) {
-            return this.resolve(`${source}.ts`, importer);
-          } else if (source === "graphql") {
-            return { id: "graphql/index.mjs", external: true };
-          } else if (source === "graphql/execution/execute") {
-            return { id: "graphql/execution/execute.mjs", external: true };
-          } else if (/^[@\w]/.test(source)) {
-            return false;
-          }
-        },
+        dir: "dist",
+        format: "module",
+        entryFileNames: "[name].js",
+        chunkFileNames: "[name]-[hash].js",
+        hoistTransitiveImports: false,
+        generatedCode: { arrowFunctions: true, constBindings: true, objectShorthand: true },
+      },
+      {
+        dir: "dist",
+        format: "commonjs",
+        entryFileNames: "[name].cjs",
+        chunkFileNames: "[name]-[hash].cjs",
+        hoistTransitiveImports: false,
+        generatedCode: { arrowFunctions: true, constBindings: true, objectShorthand: true },
       },
     ],
-  },
-  {
-    input,
-    output: {
-      dir: "dist",
-      format: "commonjs",
-      entryFileNames: "[name].cjs",
-      chunkFileNames: "[name]-[hash].cjs",
-      hoistTransitiveImports: false,
-      generatedCode: { arrowFunctions: true, constBindings: true, objectShorthand: true },
-    },
-    plugins: [
-      swc(),
-      {
-        name: "resolve",
-        resolveId(source, importer) {
-          if (source[0] === "." && !source.endsWith(".ts")) {
-            return this.resolve(`${source}.ts`, importer);
-          } else if (/^[@\w]/.test(source)) {
-            return false;
-          }
-        },
-      },
-    ],
+    external: /^[@\w]/,
+    plugins: [shebang(), nodeResolve({ extensions: [".ts"] }), swc()],
   },
   {
     input,
     output: { dir: "dist" },
+    logLevel: "silent",
     plugins: [dts()],
   },
 ]);
