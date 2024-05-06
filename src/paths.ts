@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 const filename = fileURLToPath(import.meta.url);
 let path = join(filename, "..", "..");
 const suffix = `${sep}node_modules${sep}@mo36924${sep}graphql`;
-if (filename.endsWith(suffix)) {
+if (path.endsWith(suffix)) {
   path = path.slice(0, -suffix.length);
 }
 
