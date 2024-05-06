@@ -1,19 +1,15 @@
 /* eslint-disable ts/consistent-type-imports */
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { CompletionItemKind } from "graphql-language-service";
+import { buildSync } from "esbuild";
 import ts from "typescript";
 import { DiagnosticSeverity } from "vscode-languageserver-types";
 
 declare const graphql: typeof import("graphql");
 declare const graphqlLanguageService: typeof import("graphql-language-service");
 declare const getGraphQLSchema: typeof import("./getGraphQLSchema").getGraphQLSchema;
-
-const useStrict = `
-"use strict";
-const graphql = require("graphql");
-const graphqlLanguageService = require("graphql-language-service");
-const { getGraphQLSchema } = require("@mo36924/graphql/getGraphQLSchema");
-`;
 
 declare const {
   DiagnosticCategory,
@@ -444,6 +440,38 @@ function createLanguageService(...args: Parameters<typeof _createLanguageService
 }
 
 export const patchTypescript = () => {
+  const result = buildSync({
+    bundle: true,
+    write: false,
+    platform: "node",
+    mainFields: ["module", "main"],
+    resolveExtensions: [".ts", ".mjs", ".js", ".cjs"],
+    logLevel: "error",
+    external: ["prettier", "@prettier/sync"],
+    banner: { js: "var _importMetaUrl = require('url').pathToFileURL(__filename).href;" },
+    define: {
+      "import.meta.url": "_importMetaUrl",
+    },
+    stdin: {
+      contents: `
+        export * as graphql from "graphql"
+        export * as graphqlLanguageService from "graphql"
+        export { getGraphQLSchema } from "./getGraphQLSchema"
+      `,
+      loader: "ts",
+      resolveDir: dirname(fileURLToPath(import.meta.url)),
+    },
+  });
+
+  const code = `
+    const { graphql, graphqlLanguageService, getGraphQLSchema } = (() => {
+      var exports = {}
+      var module = { exports };
+      ${result.outputFiles[0]?.text ?? ""}
+      return module.exports;
+    })();
+  `;
+
   for (const name of ["tsc", "tsserver"]) {
     const src = `node_modules/typescript/lib/${name}.js`;
     const dest = `${src}_`;
@@ -453,7 +481,7 @@ export const patchTypescript = () => {
     writeFileSync(
       src,
       readFileSync(dest, "utf-8")
-        .replace('"use strict";', () => useStrict)
+        .replace('"use strict";', (match) => match + code)
         .replace(
           /function getEffectiveCallArguments[\s\S]*?(?=getGlobalTemplateStringsArrayType)/,
           (match) => `${getEffectiveTemplateStringsArrayType}${match}getEffectiveTemplateStringsArrayType(node)||`,

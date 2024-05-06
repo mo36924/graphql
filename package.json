@@ -1,7 +1,7 @@
 {
   "name": "@mo36924/graphql",
   "type": "module",
-  "version": "3.0.4",
+  "version": "3.0.5",
   "description": "",
   "author": "mo36924",
   "license": "MIT",
@@ -75,7 +75,8 @@
   "dependencies": {
     "@babel/core": "^7.24.5",
     "@prettier/sync": "^0.5.2",
-    "change-case": "^4.1.2",
+    "change-case": "^5.4.4",
+    "esbuild": "^0.20.2",
     "graphql": "^16.8.1",
     "graphql-language-service": "^5.2.0",
     "graphql-scalars": "^1.23.0",
