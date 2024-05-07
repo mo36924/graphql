@@ -6,7 +6,7 @@ import { buildSchema } from "./schema";
 let _graphql: string | undefined;
 let schema: GraphQLSchema | undefined;
 
-export const getGraphQLSchema = () => {
+export const getGraphQLSchema = (): GraphQLSchema => {
   const graphql = readFileSync(schemaPath, "utf-8");
   if (graphql === _graphql && schema) {
     return schema;
