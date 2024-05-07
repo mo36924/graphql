@@ -11,9 +11,9 @@ import {
 import { Context } from "./buildContext";
 import { getDirectives } from "./directives";
 
-const identifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
+export const identifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
 
-const literal = (value: string | number | boolean | Date | null | undefined) => {
+export const literal = (value: string | number | boolean | Date | null | undefined) => {
   if (value == null) {
     return "null";
   }

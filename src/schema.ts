@@ -200,3 +200,9 @@ export const buildSchema = (graphql: string): GraphQLSchema => {
   mergeCustomScalars(graphQLSchema);
   return graphQLSchema;
 };
+
+export const getSchemaTypes = (schema: GraphQLSchema) => {
+  const source = schema.getQueryType()?.astNode?.loc?.source.body ?? "";
+  const types = buildTypes(source);
+  return types;
+};

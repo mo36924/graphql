@@ -1,11 +1,11 @@
 import { GraphQLSchema } from "graphql";
 import { ScalarTypeName } from "./scalars";
-import { buildTypes, isSchemaTypeName } from "./types";
+import { getSchemaTypes } from "./schema";
+import { isSchemaTypeName } from "./types";
 import { createObject } from "./utils";
 
 export const buildData = (schema: GraphQLSchema, baseRecordCount = 3) => {
-  const source = schema.getQueryType()?.astNode?.loc?.source.body ?? "";
-  const types = buildTypes(source);
+  const types = getSchemaTypes(schema);
   const recordCounts = createObject<{ [typeName: string]: number }>();
 
   const getRecordCount = (dep: string, deps: string[] = []): number => {
