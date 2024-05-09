@@ -109,8 +109,8 @@ export const buildQuery = ({ schema, operation, variableValues }: Context) => {
   const query = visit(
     operation,
     visitWithTypeInfo(typeInfo, {
-      OperationDefinition: { leave: (node) => node.selectionSet },
-      SelectionSet: { leave: (node) => `select jsonb_object(${node.selections}) as ${identifier("data")}` },
+      OperationDefinition: { leave: (node) => `select json(${node.selectionSet}) as ${identifier("data")}` },
+      SelectionSet: { leave: (node) => `jsonb_object(${node.selections})` },
       Field: {
         leave(node) {
           const fieldType = typeInfo.getType()!;
@@ -123,6 +123,9 @@ export const buildQuery = ({ schema, operation, variableValues }: Context) => {
           if (scalar) {
             const name = node.name.value;
             switch (type) {
+              case "Boolean":
+                value = `case ${identifier(name)} when true then jsonb(${literal("true")}) when false then jsonb(${literal("false")}) else null end`;
+                break;
               case "Date":
                 value = `jsonb_array(0,${identifier(name)})`;
                 break;
