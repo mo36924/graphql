@@ -67,7 +67,7 @@
     "fix": "run-s fix:*",
     "fix:eslint": "eslint --fix .",
     "fix:prettier": "prettier --write .",
-    "test": "vitest",
+    "test": "vitest run",
     "postinstall": "node -e \"import('./dist/patch.js').catch(()=>{})\""
   },
   "dependencies": {
