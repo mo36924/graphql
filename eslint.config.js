@@ -8,6 +8,7 @@ export default antfu({
   },
   rules: {
     curly: "error",
+    "no-template-curly-in-string": "off",
     "import/order": ["error", { alphabetize: { order: "asc" } }],
     "ts/consistent-type-definitions": ["error", "type"],
     "ts/consistent-type-imports": ["error", { prefer: "no-type-imports" }],
