@@ -5,10 +5,13 @@ import { nodeModulesPath } from "./paths";
 for (const extension of ["js", "mjs"]) {
   const src = join(nodeModulesPath, "prettier", "plugins", `estree.${extension}`);
   const dest = `${src}_`;
+
   if (!existsSync(dest)) {
     copyFileSync(src, dest);
   }
+
   const code = readFileSync(dest, "utf-8");
+
   const printEmbedGraphQLFunctionName = code
     .slice(code.lastIndexOf("function", code.indexOf('parser:"graphql"')))
     .match(/function (.*?)\(/)![1];

@@ -1,7 +1,7 @@
-import { expect, it } from "vitest";
+import { expect, test } from "vitest";
 import { printDirectives } from "./directives";
 
-it("printDirectives", () => {
+test("printDirectives", () => {
   expect(printDirectives({ field: { name: "user", key: "userId" } })).toMatchInlineSnapshot(
     `"@field(name:"user" key:"userId" )"`,
   );

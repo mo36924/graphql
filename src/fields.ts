@@ -4,19 +4,17 @@ import { FieldDirectives } from "./directives";
 import { logicalOperators } from "./operators";
 import { createObject } from "./utils";
 
-export interface Fields {
+export type Fields = {
   [fieldName: string]: Field;
-}
-
-export interface Field {
+};
+export type Field = {
   name: string;
   type: string;
   scalar: boolean;
   nullable: boolean;
   list: boolean;
   directives: FieldDirectives;
-}
-
+};
 export const baseType = /* GraphQL */ `
   type BaseType {
     id: UUID!
@@ -24,7 +22,6 @@ export const baseType = /* GraphQL */ `
     updatedAt: Date!
   }
 `;
-
 export const baseFieldNames = ["id", "createdAt", "updatedAt"] as const;
 export type BaseFieldName = (typeof baseFieldNames)[number];
 export const isBaseFieldName = (type: string): type is BaseFieldName => baseFieldNames.includes(type as BaseFieldName);
@@ -32,11 +29,9 @@ export const reservedFieldNames = [...baseFieldNames, ...logicalOperators] as co
 export type ReservedFieldName = (typeof reservedFieldNames)[number];
 export const isReservedFieldName = (name: string): name is ReservedFieldName =>
   reservedFieldNames.includes(name as any);
-
 export const getFieldName = (name: string) => camelCase(pluralize.singular(name));
 export const getListFieldName = (name: string) => camelCase(pluralize.plural(name));
 export const getKeyFieldName = (name: string) => getFieldName(name).replace(/(Id)*$/, "Id");
-
 export const getKeyFieldNames = (name1: string, name2: string): [string, string] => [
   getKeyFieldName(name1),
   getKeyFieldName(name2),

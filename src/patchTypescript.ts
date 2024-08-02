@@ -2,8 +2,8 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CompletionItemKind } from "graphql-language-service";
 import { buildSync } from "esbuild";
+import { CompletionItemKind } from "graphql-language-service";
 import ts from "typescript";
 import { DiagnosticSeverity } from "vscode-languageserver-types";
 import { nodeModulesPath } from "./paths";
@@ -82,32 +82,40 @@ function getEffectiveTemplateStringsArrayType(node: ts.TaggedTemplateExpression)
 
   const { template } = node;
   let query = "";
+
   if (isNoSubstitutionTemplateLiteral(template)) {
     query += template.text;
   } else {
     query += template.head.text;
+
     template.templateSpans.forEach((span, i) => {
       query += `$_${i}${span.literal.text}`;
     });
   }
+
   let documentNode;
+
   try {
     documentNode = parse(query);
   } catch {
     return;
   }
+
   const validationRules = specifiedRules.filter((rule) => rule !== NoUndefinedVariablesRule);
   const graphqlSchema = getGraphQLSchema();
   const errors = validate(graphqlSchema, documentNode, validationRules);
+
   if (errors.length) {
     return;
   }
+
   const typeInfo = new TypeInfo(graphqlSchema);
   const values: ts.Type[] = [];
   const variables: ts.Symbol[] = [];
   const symbols: ts.Symbol[] = [];
   const symbolsMap = new Map<any, ts.Symbol[]>();
   let i = 0;
+
   visit(
     documentNode,
     visitWithTypeInfo(typeInfo, {
@@ -117,12 +125,15 @@ function getEffectiveTemplateStringsArrayType(node: ts.TaggedTemplateExpression)
         const nullableType = getNullableType(inputType);
         const namedType = getNamedType(nullableType)!;
         let type = getTypescriptType(namedType.name);
+
         if (isListType(nullableType)) {
           type = createArrayType(type);
         }
+
         if (isNullableType(inputType)) {
           type = getUnionType([type, nullType]);
         }
+
         const symbol = createProperty(variableName, type);
         values.push(type);
         variables.push(symbol);
@@ -133,14 +144,17 @@ function getEffectiveTemplateStringsArrayType(node: ts.TaggedTemplateExpression)
             symbolsMap.set(node.selectionSet.selections, []);
             return;
           }
+
           const parentSymbols = symbolsMap.get(parent) || symbols;
           const fieldName = (node.alias || node.name).value;
           const outputType = typeInfo.getType();
           const namedType = getNamedType(outputType)!;
           let type = getTypescriptType(namedType.name);
+
           if (isNullableType(outputType)) {
             type = getUnionType([type, nullType]);
           }
+
           const symbol = createProperty(fieldName, type);
           parentSymbols.push(symbol);
           return false;
@@ -153,34 +167,42 @@ function getEffectiveTemplateStringsArrayType(node: ts.TaggedTemplateExpression)
           const selectionSymbols = symbolsMap.get(node.selectionSet?.selections ?? []);
           const selectionSymbolTable = createSymbolTable(selectionSymbols);
           let type = createPropertiesType(selectionSymbolTable);
+
           if (isListType(nullableType)) {
             type = createArrayType(type);
           }
+
           if (isNullableType(outputType)) {
             type = getUnionType([type, nullType]);
           }
+
           const symbol = createProperty(fieldName, type);
           parentSymbols.push(symbol);
         },
       },
     }),
   );
+
   const valuesSymbol = createProperty("values", createTupleType(values));
   const variablesSymbol = createProperty("variables", createPropertiesType(createSymbolTable(variables)));
   const dataSymbol = createProperty("data", createPropertiesType(createSymbolTable(symbols)));
+
   const privateSymbol = createProperty(
     "_",
     createPropertiesType(createSymbolTable([valuesSymbol, variablesSymbol, dataSymbol])),
   );
+
   const graphQLTemplateStringsArrayType = getIntersectionType([
     getGlobalTemplateStringsArrayType(),
     createPropertiesType(createSymbolTable([privateSymbol])),
   ]);
+
   return graphQLTemplateStringsArrayType;
 }
 
 function createLanguageService(...args: Parameters<typeof _createLanguageService>): ts.LanguageService {
   const { GraphQLError } = graphql;
+
   const {
     CompletionItemKind,
     DIAGNOSTIC_SEVERITY,
@@ -360,13 +382,15 @@ function createLanguageService(...args: Parameters<typeof _createLanguageService
       const graphqlSchema = getGraphQLSchema();
       const items = getAutocompleteSuggestions(graphqlSchema, query, cursor);
 
-      if (/^\s*{\s*}\s*$/.test(query)) {
+      if (/^\s*\{\s*\}\s*$/.test(query)) {
         const operation = "mutation";
         const cursor = new Position(0, operation.length + position - offset);
         const labels = new Set(items.map((item) => item.label));
+
         const mutationItems = getAutocompleteSuggestions(graphqlSchema, operation + query, cursor).filter(
           (item) => !labels.has(item.label),
         );
+
         items.push(...mutationItems);
       }
 
@@ -409,6 +433,7 @@ function createLanguageService(...args: Parameters<typeof _createLanguageService
               if (/Variable "\$.*?" is not defined/.test(message)) {
                 continue;
               }
+
               diagnostics.push({
                 category: getDiagnosticCategory(severity),
                 code: 9999,
@@ -475,9 +500,11 @@ const { graphql, graphqlLanguageService, getGraphQLSchema } = (() => {
 for (const name of ["tsc", "tsserver"]) {
   const src = join(nodeModulesPath, "typescript", "lib", `${name}.js`);
   const dest = `${src}_`;
+
   if (!existsSync(dest)) {
     copyFileSync(src, dest);
   }
+
   writeFileSync(
     src,
     readFileSync(dest, "utf-8")

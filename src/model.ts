@@ -43,6 +43,7 @@ export const fixModel = (graphql: string) => {
       }
 
       const fieldType = getTypeName(type);
+
       field = fields[fieldName] = {
         ...field,
         name: fieldName,
@@ -101,7 +102,6 @@ export const fixModel = (graphql: string) => {
   buildSchema(customScalars + modelDirectives + model);
   return model;
 };
-
 export const buildModel = (graphql: string) => {
   const fixedModel = fixModel(graphql);
   const types = buildTypes(fixedModel + customScalars + modelDirectives);

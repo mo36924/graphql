@@ -85,6 +85,7 @@
     "@cloudflare/workers-types": "^4.20240502.0",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-swc": "^0.3.1",
+    "@stylistic/eslint-plugin-ts": "^2.6.1",
     "@swc/core": "^1.7.5",
     "@types/babel__core": "^7.20.5",
     "@types/better-sqlite3": "^7.6.10",

@@ -7,30 +7,30 @@ import { formatGraphQL } from "./format";
 import { isScalarTypeName, scalarTypeNames } from "./scalars";
 import { createObject } from "./utils";
 
-export interface Types {
+export type Types = {
   [typeName: string]: Type;
-}
-export interface Type {
+};
+export type Type = {
   name: string;
   directives: TypeDirectives;
   fields: Fields;
-}
+};
 export const schemaTypeNames = ["Query", "Mutation", "Subscription"] as const;
 export type SchemaTypeName = (typeof schemaTypeNames)[number];
 export const reservedTypeNames = [...schemaTypeNames, ...scalarTypeNames] as const;
 export type ReservedTypeName = (typeof reservedTypeNames)[number];
 export const isSchemaTypeName = (name: string): name is SchemaTypeName => schemaTypeNames.includes(name as any);
 export const isReservedTypeName = (name: string): name is ReservedTypeName => reservedTypeNames.includes(name as any);
-
 export const getTypeName = (name: string) => {
   const typeName = pascalCase(pluralize.singular(name));
   const upperCaseName = typeName.toUpperCase();
+
   if (isScalarTypeName(upperCaseName)) {
     return upperCaseName;
   }
+
   return typeName;
 };
-
 export const getJoinTypeName = (name1: string, name2?: string): string => {
   if (name2 != null) {
     return [name1, name2].map(getTypeName).sort().join("To");
@@ -114,7 +114,6 @@ export const buildTypes = (graphql: string): Types => {
 
   return types;
 };
-
 export const sortTypes = (types: Types): Types =>
   createObject(
     Object.fromEntries(
@@ -123,10 +122,8 @@ export const sortTypes = (types: Types): Types =>
         .map(([typeName, type]) => [typeName, { ...type, fields: sortFields(type.fields) }]),
     ),
   );
-
 export const printFieldType = (field: Pick<Field, "type" | "list" | "nullable">): string =>
   `${field.list ? `[${field.type}!]` : field.type}${field.nullable ? "" : "!"}`;
-
 export const printTypes = (types: Types): string => {
   let schema = "";
 

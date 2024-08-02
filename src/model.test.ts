@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, test } from "vitest";
 import { buildModel, fixModel } from "./model";
 
 const model = /* GraphQL */ `
@@ -21,7 +21,7 @@ const model = /* GraphQL */ `
   }
 `;
 
-it("fixModel", () => {
+test("fixModel", () => {
   expect(fixModel(model)).toMatchInlineSnapshot(`
     "type Class {
       name: String!
@@ -47,7 +47,7 @@ it("fixModel", () => {
   `);
 });
 
-it("buildModel", () => {
+test("buildModel", () => {
   expect(buildModel(model)).toMatchInlineSnapshot(`
     "scalar Date
 

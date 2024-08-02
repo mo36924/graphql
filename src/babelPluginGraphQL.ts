@@ -15,6 +15,7 @@ declare global {
   type GraphQLTemplateStringsArray = TemplateStringsArray & {
     _: { values: any[]; variables: object; data: object };
   };
+
   const gql: <T extends GraphQLTemplateStringsArray>(
     strings: T,
     ...values: T["_"]["values"]
@@ -37,6 +38,7 @@ export default (): PluginObj => {
         }
 
         const name = tag.name;
+
         if (name !== "gql") {
           return;
         }

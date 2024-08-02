@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, test } from "vitest";
 import { buildSchema } from "./schema";
 
 const graphql = /* GraphQL */ `
@@ -24,7 +24,7 @@ const graphql = /* GraphQL */ `
   }
 `;
 
-it("buildSchema", () => {
+test("buildSchema", () => {
   const schema = buildSchema(graphql);
   const source = schema.getQueryType()?.astNode?.loc?.source.body;
 

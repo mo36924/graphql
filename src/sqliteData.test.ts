@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { expect, it } from "vitest";
+import { expect, test } from "vitest";
 import { buildSchema } from "./schema";
 import { identifier } from "./sqlite";
 import { buildSQLiteData } from "./sqliteData";
@@ -28,7 +28,7 @@ const model = /* GraphQL */ `
   }
 `;
 
-it("buildSQLiteData", () => {
+test("buildSQLiteData", () => {
   const schema = buildSchema(model);
   const sqliteSchema = buildSQLiteSchema(schema);
   const sqliteData = buildSQLiteData(schema);
@@ -36,12 +36,14 @@ it("buildSQLiteData", () => {
   db.exec(sqliteSchema);
   db.exec(sqliteData);
   const result = db.prepare<[], { name: string }>("select name from sqlite_schema where type = 'table'").all();
+
   const names = Object.fromEntries(
     result.map(({ name }) => [
       name,
       db.prepare<[], { length: number }>(`select count(*) as length from ${identifier(name)}`).all()[0].length,
     ]),
   );
+
   expect(names).toMatchInlineSnapshot(`
     {
       "Class": 3,

@@ -1,15 +1,17 @@
 import antfu from "@antfu/eslint-config";
+import stylisticTs from "@stylistic/eslint-plugin-ts";
 
 export default antfu({
+  stylistic: false,
+  plugins: {
+    style: stylisticTs,
+  },
   rules: {
     curly: "error",
     "import/order": ["error", { alphabetize: { order: "asc" } }],
     "ts/consistent-type-definitions": ["error", "type"],
     "ts/consistent-type-imports": ["error", { prefer: "no-type-imports" }],
     "ts/no-redeclare": "off",
-    "style/quotes": "off",
-    "style/quote-props": "off",
-    "style/semi": "off",
     "style/padding-line-between-statements": [
       "error",
       {

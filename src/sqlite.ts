@@ -12,7 +12,6 @@ import { Context } from "./buildContext";
 import { getDirectives } from "./directives";
 
 export const identifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
-
 export const literal = (value: string | number | boolean | Date | null | undefined) => {
   if (value == null) {
     return "null";
@@ -106,6 +105,7 @@ const order = (args: { [key: string]: string } | null | undefined) =>
 
 export const buildQuery = ({ schema, operation, variableValues }: Context) => {
   const typeInfo = new TypeInfo(schema);
+
   const query = visit(
     operation,
     visitWithTypeInfo(typeInfo, {
@@ -120,8 +120,10 @@ export const buildQuery = ({ schema, operation, variableValues }: Context) => {
           const scalar = isScalarType(namedType);
           const type = namedType.name;
           let value: string;
+
           if (scalar) {
             const name = node.name.value;
+
             switch (type) {
               case "Boolean":
                 value = `case ${identifier(name)} when true then jsonb(${literal("true")}) when false then jsonb(${literal("false")}) else null end`;

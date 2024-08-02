@@ -8,9 +8,11 @@ let schema: GraphQLSchema | undefined;
 
 export const getGraphQLSchema = (): GraphQLSchema => {
   const graphql = readFileSync(schemaPath, "utf-8");
+
   if (graphql === _graphql && schema) {
     return schema;
   }
+
   _graphql = graphql;
   schema = buildSchema(graphql);
   return schema;

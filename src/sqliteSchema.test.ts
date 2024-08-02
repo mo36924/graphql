@@ -1,7 +1,8 @@
 import Database from "better-sqlite3";
-import { expect, it } from "vitest";
+import { expect, test } from "vitest";
 import { buildSchema } from "./schema";
 import { buildSQLiteSchema } from "./sqliteSchema";
+
 const db = new Database(":memory:");
 
 const model = /* GraphQL */ `
@@ -27,9 +28,10 @@ const model = /* GraphQL */ `
   }
 `;
 
-it("sqliteSchema", () => {
+test("sqliteSchema", () => {
   const schema = buildSchema(model);
   const sqliteSchema = buildSQLiteSchema(schema);
+
   expect(sqliteSchema).toMatchInlineSnapshot(`
     "create table "Class" (
       "id" blob not null primary key,
@@ -73,6 +75,7 @@ it("sqliteSchema", () => {
 
   db.exec(sqliteSchema);
   const result = db.prepare("select * from sqlite_schema").all();
+
   expect(result).toMatchInlineSnapshot(`
     [
       {

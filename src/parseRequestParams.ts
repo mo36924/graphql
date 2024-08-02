@@ -1,10 +1,10 @@
-export interface Params {
+export type Params = {
   query: string;
   variables?: Record<string, any>;
-}
-
+};
 export const parseRequestParams = async (request: Request): Promise<Params> => {
   const method = request.method;
+
   if (method !== "GET" && method !== "POST") {
     throw new Response(null, {
       status: 405,
@@ -28,6 +28,7 @@ export const parseRequestParams = async (request: Request): Promise<Params> => {
     const searchParams = new URLSearchParams(search);
     query = searchParams.get("query");
     const _variables = searchParams.get("variables");
+
     if (_variables) {
       try {
         variables = JSON.parse(_variables);
@@ -39,16 +40,20 @@ export const parseRequestParams = async (request: Request): Promise<Params> => {
     if (!request.body) {
       throw new Response(null, { status: 400, statusText: "Bad Request" });
     }
+
     let data: any;
+
     try {
       const body = await request.text();
       data = JSON.parse(body);
     } catch {
       throw new Response(null, { status: 400, statusText: "Bad Request" });
     }
+
     if (data === null || typeof data !== "object") {
       throw new Response(null, { status: 400, statusText: "Bad Request" });
     }
+
     query = data.query;
     variables = data.variables;
   } else {

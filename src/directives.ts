@@ -1,22 +1,19 @@
 import { FieldDefinitionNode, GraphQLSchema, ObjectTypeDefinitionNode, getArgumentValues } from "graphql";
 
-export interface TypeDirectives {
+export type TypeDirectives = {
   join?: Record<string, never>;
-}
-
-export interface FieldDirectives {
+};
+export type FieldDirectives = {
   field?: { name: string; key: string };
   type?: { name: string; keys: [string, string] };
   key?: { name: string };
   ref?: { name: string };
   unique?: Record<string, never>;
-}
-
+};
 export const modelDirectives = /* GraphQL */ `
   directive @field(name: String!) on FIELD_DEFINITION
   directive @type(name: String!) on FIELD_DEFINITION
 `;
-
 export const schemaDirectives = /* GraphQL */ `
   directive @join on OBJECT
   directive @unique on FIELD_DEFINITION
@@ -25,18 +22,18 @@ export const schemaDirectives = /* GraphQL */ `
   directive @field(name: String!, key: String!) on FIELD_DEFINITION
   directive @type(name: String!, keys: [String!]!) on FIELD_DEFINITION
 `;
-
 export const getDirectives = <T extends ObjectTypeDefinitionNode | FieldDefinitionNode>(
   schema: GraphQLSchema,
   node: T,
 ): T extends ObjectTypeDefinitionNode ? TypeDirectives : FieldDirectives => {
   const directives: any = Object.create(null);
+
   for (const directive of node.directives ?? []) {
     directives[directive.name.value] = getArgumentValues(schema.getDirective(directive.name.value)!, directive);
   }
+
   return directives;
 };
-
 export const printDirectives = (directives: TypeDirectives | FieldDirectives): string => {
   let _directives = "";
 

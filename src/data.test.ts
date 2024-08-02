@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, test } from "vitest";
 import { buildData } from "./data";
 import { buildSchema } from "./schema";
 
@@ -25,9 +25,10 @@ const model = /* GraphQL */ `
   }
 `;
 
-it("buildData", () => {
+test("buildData", () => {
   const schema = buildSchema(model);
   const data = buildData(schema);
+
   expect(data).toMatchInlineSnapshot(`
     [
       {

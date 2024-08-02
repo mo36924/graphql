@@ -12,6 +12,7 @@ export const vitePluginGraphQL = (): Plugin => {
       if (!extnames.includes(extname(id))) {
         return;
       }
+
       const result = transformSync(code, {
         babelrc: false,
         configFile: false,
@@ -21,6 +22,7 @@ export const vitePluginGraphQL = (): Plugin => {
         parserOpts: { plugins: ["jsx", "typescript"] },
         plugins: [babelPluginGraphQL],
       });
+
       return { code: result?.code ?? undefined, map: result?.map ?? undefined };
     },
   };

@@ -1,6 +1,6 @@
-import { expect, it } from "vitest";
-import { buildSchema } from "./schema";
+import { expect, test } from "vitest";
 import { buildDeclaration } from "./declaration";
+import { buildSchema } from "./schema";
 
 const model = /* GraphQL */ `
   type User {
@@ -25,9 +25,10 @@ const model = /* GraphQL */ `
   }
 `;
 
-it("declaration", () => {
+test("declaration", () => {
   const schema = buildSchema(model);
   const declaration = buildDeclaration(schema);
+
   expect(declaration).toMatchInlineSnapshot(`
     "declare global {
       namespace GraphQL {

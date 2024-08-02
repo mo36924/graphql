@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { expect, it } from "vitest";
+import { expect, test } from "vitest";
 import { buildContext } from "./buildContext";
 import { buildSchema } from "./schema";
 import { buildQuery } from "./sqlite";
@@ -29,18 +29,21 @@ const model = /* GraphQL */ `
   }
 `;
 
-it("buildQuery", () => {
+test("buildQuery", () => {
   const schema = buildSchema(model);
   const sqliteSchema = buildSQLiteSchema(schema);
   const sqliteData = buildSQLiteData(schema);
   const db = new Database(":memory:");
   db.exec(sqliteSchema);
   db.exec(sqliteData);
+
   const context = buildContext(new Request("http://example.com"), schema, {
     query: "{users(limit: 2){id name class{name}}}",
   });
+
   const query = buildQuery(context);
   const result = db.prepare<object[], { data: string }>(query).all()[0].data;
+
   expect(JSON.parse(result)).toMatchInlineSnapshot(`
     {
       "users": [

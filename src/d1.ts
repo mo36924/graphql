@@ -8,7 +8,6 @@ export const execute = async (db: D1Database, query: string) => {
   const rows = await db.prepare(query).raw<string[]>();
   return new Response(rows[0][0], { headers: { "Content-Type": "application/json; charset=utf-8" } });
 };
-
 export const handler = async (request: Request, schema: GraphQLSchema, db: D1Database) => {
   try {
     const params = await parseRequestParams(request);
@@ -20,6 +19,7 @@ export const handler = async (request: Request, schema: GraphQLSchema, db: D1Dat
     if (error instanceof Response) {
       return error;
     }
+
     return new Response(null, { status: 500, statusText: "Internal Server Error" });
   }
 };

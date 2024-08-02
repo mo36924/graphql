@@ -19,6 +19,7 @@ const customScalarTypeMap: { [key in CustomScalarTypeName]: GraphQLScalarType } 
 
 export const mergeCustomScalars = (schema: GraphQLSchema) => {
   const typeMap = schema.getTypeMap();
+
   for (const [key, value] of Object.entries(customScalarTypeMap)) {
     Object.assign(typeMap[key], value);
   }

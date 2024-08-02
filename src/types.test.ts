@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, test } from "vitest";
 import { buildTypes, printTypes, sortTypes } from "./types";
 
 const schema = /* GraphQL */ `
@@ -14,7 +14,7 @@ const schema = /* GraphQL */ `
   }
 `;
 
-it("buildTypes", () => {
+test("buildTypes", () => {
   expect(buildTypes(schema)).toMatchInlineSnapshot(`
     {
       "Post": {
@@ -73,7 +73,7 @@ it("buildTypes", () => {
   `);
 });
 
-it("printTypes", () => {
+test("printTypes", () => {
   expect(printTypes(buildTypes(schema))).toMatchInlineSnapshot(`
     "type User {
       name: String!
@@ -89,7 +89,7 @@ it("printTypes", () => {
   `);
 });
 
-it("sortTypes", () => {
+test("sortTypes", () => {
   expect(printTypes(sortTypes(buildTypes(schema)))).toMatchInlineSnapshot(`
     "type Post {
       id: ID!
