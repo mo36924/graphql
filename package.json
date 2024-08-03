@@ -60,13 +60,14 @@
   "scripts": {
     "build": "rollup -c --configPlugin swc",
     "clean": "del dist",
+    "fix": "run-s fix:*",
+    "fix:eslint": "eslint --fix .",
+    "fix:prettier": "prettier --write .",
     "lint": "run-s lint:*",
     "lint:eslint": "eslint .",
     "lint:prettier": "prettier --check .",
     "lint:typescript": "tsc --noEmit",
-    "fix": "run-s fix:*",
-    "fix:eslint": "eslint --fix .",
-    "fix:prettier": "prettier --write .",
+    "ci": "run-s clean lint test build",
     "test": "vitest run",
     "postinstall": "node -e \"import('./dist/patch.js').catch(()=>{})\""
   },
