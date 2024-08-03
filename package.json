@@ -71,7 +71,7 @@
     "postinstall": "node -e \"import('./dist/patch.js').catch(()=>{})\""
   },
   "dependencies": {
-    "@babel/core": "^7.24.5",
+    "@babel/core": "^7.25.2",
     "@prettier/sync": "^0.5.2",
     "change-case": "^5.4.4",
     "esbuild": "^0.20.2",
@@ -82,14 +82,14 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^2.24.1",
-    "@cloudflare/workers-types": "^4.20240502.0",
+    "@cloudflare/workers-types": "^4.20240729.0",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-swc": "^0.3.1",
     "@stylistic/eslint-plugin-ts": "^2.6.1",
     "@swc/core": "^1.7.5",
     "@types/babel__core": "^7.20.5",
-    "@types/better-sqlite3": "^7.6.10",
-    "@types/node": "^20.12.8",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^20.14.14",
     "@types/pluralize": "^0.0.33",
     "better-sqlite3": "^9.6.0",
     "del-cli": "^5.1.0",
