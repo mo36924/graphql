@@ -91,7 +91,7 @@
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^20.14.14",
     "@types/pluralize": "^0.0.33",
-    "better-sqlite3": "^9.6.0",
+    "better-sqlite3": "^11.0.0",
     "del-cli": "^5.1.0",
     "eslint": "^9.8.0",
     "graphql-language-service": "^5.2.2",
